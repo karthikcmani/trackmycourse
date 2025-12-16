@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>TrackMyCourse</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 40px;
+        }
+        select {
+            width: 300px;
+            padding: 6px;
+            margin-bottom: 15px;
+        }
+        h2 {
+            margin-bottom: 20px;
+        }
+    </style>
+</head>
+<body>
+
+<h2>Track My Course</h2>
+
+<select id="university">
+    <option value="">Select University</option>
+</select>
+
+<select id="program">
+    <option value="">Select Program</option>
+</select>
+
+<select id="stream">
+    <option value="">Select Stream</option>
+</select>
+
+<select id="scheme">
+    <option value="">Select Scheme</option>
+</select>
+
+<select id="semester">
+    <option value="">Select Semester</option>
+</select>
+
+<select id="course">
+    <option value="">Select Course</option>
+</select>
+
+<script>
+const uni = document.getElementById("university");
+const prog = document.getElementById("program");
+const stream = document.getElementById("stream");
+const scheme = document.getElementById("scheme");
+const sem = document.getElementById("semester");
+const course = document.getElementById("course");
+
+// Load universities
+fetch("/api/universities")
+  .then(res => res.json())
+  .then(data => {
+    data.forEach(u => {
+      uni.innerHTML += `<option value="${u.id}">${u.name}</option>`;
+    });
+  });
+
+uni.onchange = () => {
+    fetch(`/api/programs?university_id=${uni.value}`)
+      .then(res => res.json())
+      .then(data => {
+        prog.innerHTML = '<option value="">Select Program</option>';
+        data.forEach(p => {
+          prog.innerHTML += `<option value="${p.id}">${p.name}</option>`;
+        });
+      });
+};
+
+prog.onchange = () => {
+    fetch(`/api/streams?program_id=${prog.value}`)
+      .then(res => res.json())
+      .then(data => {
+        stream.innerHTML = '<option value="">Select Stream</option>';
+        data.forEach(s => {
+          stream.innerHTML += `<option value="${s.id}">${s.name}</option>`;
+        });
+      });
+
+    fetch(`/api/schemes?program_id=${prog.value}`)
+      .then(res => res.json())
+      .then(data => {
+        scheme.innerHTML = '<option value="">Select Scheme</option>';
+        data.forEach(sc => {
+          scheme.innerHTML += `<option value="${sc.id}">${sc.year}</option>`;
+        });
+      });
+};
+
+stream.onchange = () => {
+    fetch(`/api/schemes?program_id=${prog.value}&stream_id=${stream.value}`)
+      .then(res => res.json())
+      .then(data => {
+        scheme.innerHTML = '<option value="">Select Scheme</option>';
+        data.forEach(sc => {
+          scheme.innerHTML += `<option value="${sc.id}">${sc.year}</option>`;
+        });
+      });
+};
+
+scheme.onchange = () => {
+    fetch(`/api/semesters?scheme_id=${scheme.value}`)
+      .then(res => res.json())
+      .then(data => {
+        sem.innerHTML = '<option value="">Select Semester</option>';
+        data.forEach(s => {
+          sem.innerHTML += `<option value="${s.id}">Semester ${s.semester_no}</option>`;
+        });
+      });
+};
+
+sem.onchange = () => {
+    fetch(`/api/courses?semester_id=${sem.value}`)
+      .then(res => res.json())
+      .then(data => {
+        course.innerHTML = '<option value="">Select Course</option>';
+        data.forEach(c => {
+          course.innerHTML += `<option value="${c.id}">${c.name}</option>`;
+        });
+      });
+};
+</script>
+
+</body>
+</html>

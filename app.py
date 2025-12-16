@@ -26,6 +26,11 @@ app.register_blueprint(api)
 def home():
     return "TrackMyCourse backend running 🚀"
 
+from flask import render_template
+
+@app.route("/ui")
+def ui():
+    return render_template("index.html")
 
 # Flask 3.x DB init
 with app.app_context():
