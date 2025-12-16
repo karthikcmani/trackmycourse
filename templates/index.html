@@ -1,19 +1,24 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-    <title>TrackMyCourse</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Track My Course</title>
+
     <style>
         body {
             font-family: Arial, sans-serif;
             margin: 40px;
         }
-        select {
-            width: 300px;
-            padding: 6px;
-            margin-bottom: 15px;
+        label {
+            display: block;
+            margin-top: 15px;
+            font-weight: bold;
         }
-        h2 {
-            margin-bottom: 20px;
+        select {
+            width: 320px;
+            padding: 6px;
+            margin-top: 5px;
         }
     </style>
 </head>
@@ -21,110 +26,154 @@
 
 <h2>Track My Course</h2>
 
+<label for="university">University</label>
 <select id="university">
     <option value="">Select University</option>
 </select>
 
+<label for="program">Program</label>
 <select id="program">
     <option value="">Select Program</option>
 </select>
 
+<label for="stream">Stream</label>
 <select id="stream">
     <option value="">Select Stream</option>
 </select>
 
+<label for="scheme">Scheme</label>
 <select id="scheme">
     <option value="">Select Scheme</option>
 </select>
 
+<label for="semester">Semester</label>
 <select id="semester">
     <option value="">Select Semester</option>
 </select>
 
+<label for="course">Course</label>
 <select id="course">
     <option value="">Select Course</option>
 </select>
 
 <script>
-const uni = document.getElementById("university");
-const prog = document.getElementById("program");
-const stream = document.getElementById("stream");
-const scheme = document.getElementById("scheme");
-const sem = document.getElementById("semester");
-const course = document.getElementById("course");
+document.addEventListener("DOMContentLoaded", () => {
 
-// Load universities
-fetch("/api/universities")
-  .then(res => res.json())
-  .then(data => {
-    data.forEach(u => {
-      uni.innerHTML += `<option value="${u.id}">${u.name}</option>`;
+    const BASE = "http://127.0.0.1:5000";
+
+    const uni = document.getElementById("university");
+    const prog = document.getElementById("program");
+    const stream = document.getElementById("stream");
+    const scheme = document.getElementById("scheme");
+    const sem = document.getElementById("semester");
+    const course = document.getElementById("course");
+
+    // ---------- Load Universities ----------
+    fetch(`${BASE}/api/universities`)
+        .then(res => res.json())
+        .then(data => {
+            data.forEach(u => {
+                uni.innerHTML += `<option value="${u.id}">${u.name}</option>`;
+            });
+        });
+
+    // ---------- University → Program ----------
+    uni.addEventListener("change", () => {
+        resetBelow("program");
+
+        fetch(`${BASE}/api/programs?university_id=${uni.value}`)
+            .then(res => res.json())
+            .then(data => {
+                data.forEach(p => {
+                    prog.innerHTML += `<option value="${p.id}">${p.name}</option>`;
+                });
+            });
     });
-  });
 
-uni.onchange = () => {
-    fetch(`/api/programs?university_id=${uni.value}`)
-      .then(res => res.json())
-      .then(data => {
-        prog.innerHTML = '<option value="">Select Program</option>';
-        data.forEach(p => {
-          prog.innerHTML += `<option value="${p.id}">${p.name}</option>`;
-        });
-      });
-};
+    // ---------- Program → Stream / Scheme ----------
+    prog.addEventListener("change", () => {
+        resetBelow("stream");
 
-prog.onchange = () => {
-    fetch(`/api/streams?program_id=${prog.value}`)
-      .then(res => res.json())
-      .then(data => {
-        stream.innerHTML = '<option value="">Select Stream</option>';
-        data.forEach(s => {
-          stream.innerHTML += `<option value="${s.id}">${s.name}</option>`;
-        });
-      });
+        fetch(`${BASE}/api/streams?program_id=${prog.value}`)
+            .then(res => res.json())
+            .then(data => {
+                if (data.length === 0) {
+                    // MCA case (no stream)
+                    loadSchemes();
+                } else {
+                    data.forEach(s => {
+                        stream.innerHTML += `<option value="${s.id}">${s.name}</option>`;
+                    });
+                }
+            });
+    });
 
-    fetch(`/api/schemes?program_id=${prog.value}`)
-      .then(res => res.json())
-      .then(data => {
-        scheme.innerHTML = '<option value="">Select Scheme</option>';
-        data.forEach(sc => {
-          scheme.innerHTML += `<option value="${sc.id}">${sc.year}</option>`;
-        });
-      });
-};
+    // ---------- Stream → Scheme ----------
+    stream.addEventListener("change", () => {
+        loadSchemes(stream.value);
+    });
 
-stream.onchange = () => {
-    fetch(`/api/schemes?program_id=${prog.value}&stream_id=${stream.value}`)
-      .then(res => res.json())
-      .then(data => {
-        scheme.innerHTML = '<option value="">Select Scheme</option>';
-        data.forEach(sc => {
-          scheme.innerHTML += `<option value="${sc.id}">${sc.year}</option>`;
-        });
-      });
-};
+    function loadSchemes(streamId = "") {
+        resetBelow("scheme");
 
-scheme.onchange = () => {
-    fetch(`/api/semesters?scheme_id=${scheme.value}`)
-      .then(res => res.json())
-      .then(data => {
-        sem.innerHTML = '<option value="">Select Semester</option>';
-        data.forEach(s => {
-          sem.innerHTML += `<option value="${s.id}">Semester ${s.semester_no}</option>`;
-        });
-      });
-};
+        let url = `${BASE}/api/schemes?program_id=${prog.value}`;
+        if (streamId) url += `&stream_id=${streamId}`;
 
-sem.onchange = () => {
-    fetch(`/api/courses?semester_id=${sem.value}`)
-      .then(res => res.json())
-      .then(data => {
-        course.innerHTML = '<option value="">Select Course</option>';
-        data.forEach(c => {
-          course.innerHTML += `<option value="${c.id}">${c.name}</option>`;
-        });
-      });
-};
+        fetch(url)
+            .then(res => res.json())
+            .then(data => {
+                data.forEach(sc => {
+                    scheme.innerHTML += `<option value="${sc.id}">${sc.year}</option>`;
+                });
+            });
+    }
+
+    // ---------- Scheme → Semester ----------
+    scheme.addEventListener("change", () => {
+        resetBelow("semester");
+
+        fetch(`${BASE}/api/semesters?scheme_id=${scheme.value}`)
+            .then(res => res.json())
+            .then(data => {
+                data.forEach(s => {
+                    sem.innerHTML += `<option value="${s.id}">Semester ${s.semester_no}</option>`;
+                });
+            });
+    });
+
+    // ---------- Semester → Course ----------
+    sem.addEventListener("change", () => {
+        resetBelow("course");
+
+        fetch(`${BASE}/api/courses?semester_id=${sem.value}`)
+            .then(res => res.json())
+            .then(data => {
+                data.forEach(c => {
+                    course.innerHTML += `<option value="${c.id}">${c.name}</option>`;
+                });
+            });
+    });
+
+    // ---------- Helper ----------
+    function resetBelow(level) {
+        if (level === "program") {
+            prog.innerHTML = '<option value="">Select Program</option>';
+        }
+        if (["program", "stream"].includes(level)) {
+            stream.innerHTML = '<option value="">Select Stream</option>';
+        }
+        if (["program", "stream", "scheme"].includes(level)) {
+            scheme.innerHTML = '<option value="">Select Scheme</option>';
+        }
+        if (["program", "stream", "scheme", "semester"].includes(level)) {
+            sem.innerHTML = '<option value="">Select Semester</option>';
+        }
+        if (["program", "stream", "scheme", "semester", "course"].includes(level)) {
+            course.innerHTML = '<option value="">Select Course</option>';
+        }
+    }
+
+});
 </script>
 
 </body>
