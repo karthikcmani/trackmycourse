@@ -1,42 +1,50 @@
 from flask import Blueprint, request, jsonify
 from models import (
-    University, Program, Stream, Scheme,
-    Semester, Course, Module, Topic
+    University,
+    Program,
+    Stream,
+    Scheme,
+    Semester,
+    Course,
+    Module,
+    Topic
 )
 
-api = Blueprint("api", __name__)
+# ---------- API BLUEPRINT ----------
+api = Blueprint("api", __name__, url_prefix="/api")
+
 
 # ---------- UNIVERSITIES ----------
-@api.route("/api/universities")
+@api.route("/universities")
 def get_universities():
-    data = University.query.all()
+    universities = University.query.all()
     return jsonify([
-        {"id": u.id, "name": u.name} for u in data
+        {"id": u.id, "name": u.name} for u in universities
     ])
 
 
 # ---------- PROGRAMS ----------
-@api.route("/api/programs")
+@api.route("/programs")
 def get_programs():
     university_id = request.args.get("university_id")
-    data = Program.query.filter_by(university_id=university_id).all()
+    programs = Program.query.filter_by(university_id=university_id).all()
     return jsonify([
-        {"id": p.id, "name": p.name} for p in data
+        {"id": p.id, "name": p.name} for p in programs
     ])
 
 
 # ---------- STREAMS ----------
-@api.route("/api/streams")
+@api.route("/streams")
 def get_streams():
     program_id = request.args.get("program_id")
-    data = Stream.query.filter_by(program_id=program_id).all()
+    streams = Stream.query.filter_by(program_id=program_id).all()
     return jsonify([
-        {"id": s.id, "name": s.name} for s in data
+        {"id": s.id, "name": s.name} for s in streams
     ])
 
 
 # ---------- SCHEMES ----------
-@api.route("/api/schemes")
+@api.route("/schemes")
 def get_schemes():
     program_id = request.args.get("program_id")
     stream_id = request.args.get("stream_id")
@@ -46,48 +54,45 @@ def get_schemes():
     if stream_id:
         query = query.filter_by(stream_id=stream_id)
 
-    data = query.all()
-
+    schemes = query.all()
     return jsonify([
-        {"id": sc.id, "year": sc.year} for sc in data
+        {"id": s.id, "year": s.year} for s in schemes
     ])
 
 
 # ---------- SEMESTERS ----------
-@api.route("/api/semesters")
+@api.route("/semesters")
 def get_semesters():
     scheme_id = request.args.get("scheme_id")
-    data = Semester.query.filter_by(scheme_id=scheme_id).all()
+    semesters = Semester.query.filter_by(scheme_id=scheme_id).all()
     return jsonify([
-        {"id": s.id, "semester_no": s.semester_no} for s in data
+        {"id": s.id, "semester_no": s.semester_no} for s in semesters
     ])
 
 
 # ---------- COURSES ----------
-@api.route("/api/courses")
+@api.route("/courses")
 def get_courses():
     semester_id = request.args.get("semester_id")
-    data = Course.query.filter_by(semester_id=semester_id).all()
+    courses = Course.query.filter_by(semester_id=semester_id).all()
     return jsonify([
-        {"id": c.id, "name": c.name} for c in data
+        {"id": c.id, "name": c.name} for c in courses
     ])
 
 
 # ---------- SYLLABUS ----------
-@api.route("/api/syllabus")
+@api.route("/syllabus")
 def get_syllabus():
     course_id = request.args.get("course_id")
 
     modules = Module.query.filter_by(course_id=course_id).all()
 
-    response = []
-
+    data = []
     for m in modules:
-        topics = Topic.query.filter_by(module_id=m.id).all()
-        response.append({
-            "module": m.title,
+        data.append({
+            "module": m.name,
             "hours": m.hours,
-            "topics": [t.title for t in topics]
+            "topics": [t.name for t in m.topics]
         })
 
-    return jsonify(response)
+    return jsonify(data)
