@@ -20,6 +20,26 @@
             padding: 6px;
             margin-top: 5px;
         }
+        h3 {
+            margin-top: 25px;
+        }
+        .topic {
+            margin-left: 15px;
+        }
+        #progressBox {
+            margin-top: 25px;
+        }
+        #progressBarOuter {
+            width: 320px;
+            height: 10px;
+            background: #eee;
+            margin-top: 6px;
+        }
+        #progressBar {
+            height: 10px;
+            width: 0%;
+            background: #4caf50;
+        }
     </style>
 </head>
 <body>
@@ -27,34 +47,45 @@
 <h2>Track My Course</h2>
 
 <label for="university">University</label>
-<select id="university">
+<select id="university" title="Select University">
     <option value="">Select University</option>
 </select>
 
 <label for="program">Program</label>
-<select id="program">
+<select id="program" title="Select Program">
     <option value="">Select Program</option>
 </select>
 
 <label for="stream">Stream</label>
-<select id="stream">
+<select id="stream" title="Select Stream">
     <option value="">Select Stream</option>
 </select>
 
 <label for="scheme">Scheme</label>
-<select id="scheme">
+<select id="scheme" title="Select Scheme">
     <option value="">Select Scheme</option>
 </select>
 
 <label for="semester">Semester</label>
-<select id="semester">
+<select id="semester" title="Select Semester">
     <option value="">Select Semester</option>
 </select>
 
 <label for="course">Course</label>
-<select id="course">
+<select id="course" title="Select Course">
     <option value="">Select Course</option>
 </select>
+
+<!-- SYLLABUS DISPLAY -->
+<div id="syllabus"></div>
+
+<!-- PROGRESS -->
+<div id="progressBox">
+    <strong>Progress: <span id="progressText">0%</span></strong>
+    <div id="progressBarOuter">
+        <div id="progressBar"></div>
+    </div>
+</div>
 
 <script>
 document.addEventListener("DOMContentLoaded", () => {
@@ -67,6 +98,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const scheme = document.getElementById("scheme");
     const sem = document.getElementById("semester");
     const course = document.getElementById("course");
+    const syllabusDiv = document.getElementById("syllabus");
 
     // ---------- Load Universities ----------
     fetch(`${BASE}/api/universities`)
@@ -78,9 +110,8 @@ document.addEventListener("DOMContentLoaded", () => {
         });
 
     // ---------- University → Program ----------
-    uni.addEventListener("change", () => {
+    uni.onchange = () => {
         resetBelow("program");
-
         fetch(`${BASE}/api/programs?university_id=${uni.value}`)
             .then(res => res.json())
             .then(data => {
@@ -88,17 +119,15 @@ document.addEventListener("DOMContentLoaded", () => {
                     prog.innerHTML += `<option value="${p.id}">${p.name}</option>`;
                 });
             });
-    });
+    };
 
     // ---------- Program → Stream / Scheme ----------
-    prog.addEventListener("change", () => {
+    prog.onchange = () => {
         resetBelow("stream");
-
         fetch(`${BASE}/api/streams?program_id=${prog.value}`)
             .then(res => res.json())
             .then(data => {
                 if (data.length === 0) {
-                    // MCA case (no stream)
                     loadSchemes();
                 } else {
                     data.forEach(s => {
@@ -106,16 +135,12 @@ document.addEventListener("DOMContentLoaded", () => {
                     });
                 }
             });
-    });
+    };
 
-    // ---------- Stream → Scheme ----------
-    stream.addEventListener("change", () => {
-        loadSchemes(stream.value);
-    });
+    stream.onchange = () => loadSchemes(stream.value);
 
-    function loadSchemes(streamId = "") {
+    function loadSchemes(streamId="") {
         resetBelow("scheme");
-
         let url = `${BASE}/api/schemes?program_id=${prog.value}`;
         if (streamId) url += `&stream_id=${streamId}`;
 
@@ -129,9 +154,8 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     // ---------- Scheme → Semester ----------
-    scheme.addEventListener("change", () => {
+    scheme.onchange = () => {
         resetBelow("semester");
-
         fetch(`${BASE}/api/semesters?scheme_id=${scheme.value}`)
             .then(res => res.json())
             .then(data => {
@@ -139,12 +163,11 @@ document.addEventListener("DOMContentLoaded", () => {
                     sem.innerHTML += `<option value="${s.id}">Semester ${s.semester_no}</option>`;
                 });
             });
-    });
+    };
 
     // ---------- Semester → Course ----------
-    sem.addEventListener("change", () => {
+    sem.onchange = () => {
         resetBelow("course");
-
         fetch(`${BASE}/api/courses?semester_id=${sem.value}`)
             .then(res => res.json())
             .then(data => {
@@ -152,27 +175,51 @@ document.addEventListener("DOMContentLoaded", () => {
                     course.innerHTML += `<option value="${c.id}">${c.name}</option>`;
                 });
             });
-    });
+    };
 
-    // ---------- Helper ----------
+    // ---------- Course → Syllabus ----------
+    course.onchange = () => {
+        syllabusDiv.innerHTML = "";
+        fetch(`${BASE}/api/syllabus?course_id=${course.value}`)
+            .then(res => res.json())
+            .then(data => {
+                let total = 0;
+
+                data.forEach(m => {
+                    syllabusDiv.innerHTML += `<h3>${m.module} (${m.hours} hrs)</h3>`;
+                    m.topics.forEach(t => {
+                        total++;
+                        syllabusDiv.innerHTML += `
+                            <div class="topic">
+                                <input type="checkbox" class="topicCheck">
+                                ${t}
+                            </div>
+                        `;
+                    });
+                });
+
+                const checks = document.querySelectorAll(".topicCheck");
+                checks.forEach(c => {
+                    c.onchange = () => {
+                        const completed = document.querySelectorAll(".topicCheck:checked").length;
+                        const percent = Math.round((completed / total) * 100);
+                        document.getElementById("progressText").innerText = percent + "%";
+                        document.getElementById("progressBar").style.width = percent + "%";
+                    };
+                });
+            });
+    };
+
     function resetBelow(level) {
-        if (level === "program") {
-            prog.innerHTML = '<option value="">Select Program</option>';
-        }
-        if (["program", "stream"].includes(level)) {
-            stream.innerHTML = '<option value="">Select Stream</option>';
-        }
-        if (["program", "stream", "scheme"].includes(level)) {
-            scheme.innerHTML = '<option value="">Select Scheme</option>';
-        }
-        if (["program", "stream", "scheme", "semester"].includes(level)) {
-            sem.innerHTML = '<option value="">Select Semester</option>';
-        }
-        if (["program", "stream", "scheme", "semester", "course"].includes(level)) {
-            course.innerHTML = '<option value="">Select Course</option>';
-        }
+        if (level === "program") prog.innerHTML = '<option value="">Select Program</option>';
+        if (["program","stream"].includes(level)) stream.innerHTML = '<option value="">Select Stream</option>';
+        if (["program","stream","scheme"].includes(level)) scheme.innerHTML = '<option value="">Select Scheme</option>';
+        if (["program","stream","scheme","semester"].includes(level)) sem.innerHTML = '<option value="">Select Semester</option>';
+        if (["program","stream","scheme","semester","course"].includes(level)) course.innerHTML = '<option value="">Select Course</option>';
+        syllabusDiv.innerHTML = "";
+        document.getElementById("progressText").innerText = "0%";
+        document.getElementById("progressBar").style.width = "0%";
     }
-
 });
 </script>
 
