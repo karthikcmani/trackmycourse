@@ -1,87 +1,67 @@
 from app import app
-from models import db, Program, University, Semester, Course, Module, Topic
+from models import db, University, Program, Scheme, Semester, Course, Module, Topic
 
 with app.app_context():
 
-    # ---------- Program ----------
-    mca = Program(name="MCA")
-    db.session.add(mca)
+    # ---------- FETCH EXISTING BASE DATA ----------
+    ktu = University.query.filter_by(name="KTU").first()
+    mca = Program.query.filter_by(name="MCA").first()
 
-    # ---------- University ----------
-    ktu = University(name="KTU")
-    db.session.add(ktu)
+    scheme_2021 = Scheme.query.filter_by(year="2021", program_id=mca.id).first()
 
-    db.session.commit()
+    if not scheme_2021:
+        print("❌ Scheme not found. Run seed_base_data.py first.")
+        exit()
 
-    # ---------- Semester ----------
-    s1 = Semester(semester_no=1, program_id=mca.id)
-    db.session.add(s1)
-    db.session.commit()
+    # ---------- SEMESTER ----------
+    sem1 = Semester.query.filter_by(semester_no=1, scheme_id=scheme_2021.id).first()
+    if not sem1:
+        sem1 = Semester(semester_no=1, scheme_id=scheme_2021.id)
+        db.session.add(sem1)
+        db.session.flush()
 
-    # ---------- Course ----------
-    dfca = Course(
+    # ---------- COURSE ----------
+    dfca = Course.query.filter_by(
         name="Digital Fundamentals & Computer Architecture",
-        semester_id=s1.id
-    )
-    db.session.add(dfca)
-    db.session.commit()
+        semester_id=sem1.id
+    ).first()
 
-    # ---------- Modules & Topics ----------
-    modules_data = [
-        ("Module 1", 11, [
-            "1’s & 2’s complement",
-            "Logic gates",
-            "Boolean algebra",
-            "SOP & POS",
-            "K-map minimization",
-            "Floating point numbers",
-            "Combinational circuits"
-        ]),
-        ("Module 2", 10, [
-            "Sequential circuits",
-            "Flip flops",
-            "Counters",
-            "Registers"
-        ]),
-        ("Module 3", 10, [
-            "Computer abstractions",
-            "Architecture design features",
-            "Layers of abstraction",
-            "Five key components",
-            "Processor & memory technologies",
-            "Performance basics",
-            "Instruction set principles"
-        ]),
-        ("Module 4", 9, [
-            "Processor basics",
-            "Datapath building",
-            "Pipelining",
-            "Hazards",
-            "I/O organization",
-            "DMA"
-        ]),
-        ("Module 5", 8, [
-            "Memory system basics",
-            "SRAM & DRAM",
-            "ROM types",
-            "Cache memory",
-            "Virtual memory"
-        ])
+    if not dfca:
+        dfca = Course(
+            name="Digital Fundamentals & Computer Architecture",
+            semester_id=sem1.id
+        )
+        db.session.add(dfca)
+        db.session.flush()
+
+    # ---------- MODULE 1 ----------
+    m1 = Module(name="Module 1", hours=11, course_id=dfca.id)
+    db.session.add(m1)
+    db.session.flush()
+
+    topics_m1 = [
+        "Signed number representation",
+        "Logic gates",
+        "Boolean algebra",
+        "K-map minimization"
     ]
 
-    for title, hours, topics in modules_data:
-        module = Module(
-            title=title,
-            hours=hours,
-            course_id=dfca.id
-        )
-        db.session.add(module)
-        db.session.commit()
+    for t in topics_m1:
+        db.session.add(Topic(name=t, module_id=m1.id))
 
-        for t in topics:
-            topic = Topic(title=t, module_id=module.id)
-            db.session.add(topic)
+    # ---------- MODULE 2 ----------
+    m2 = Module(name="Module 2", hours=10, course_id=dfca.id)
+    db.session.add(m2)
+    db.session.flush()
 
-        db.session.commit()
+    topics_m2 = [
+        "Flip-flops",
+        "Counters",
+        "Registers"
+    ]
 
-    print("✅ KTU MCA S1 DFCA syllabus seeded successfully!")
+    for t in topics_m2:
+        db.session.add(Topic(name=t, module_id=m2.id))
+
+    db.session.commit()
+    print("✅ DFCA syllabus seeded successfully")

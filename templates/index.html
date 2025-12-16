@@ -46,37 +46,37 @@
 
 <h2>Track My Course</h2>
 
-<label for="university">University</label>
-<select id="university" title="Select University">
+<label>University</label>
+<select id="university">
     <option value="">Select University</option>
 </select>
 
-<label for="program">Program</label>
-<select id="program" title="Select Program">
+<label>Program</label>
+<select id="program">
     <option value="">Select Program</option>
 </select>
 
-<label for="stream">Stream</label>
-<select id="stream" title="Select Stream">
+<label>Stream</label>
+<select id="stream">
     <option value="">Select Stream</option>
 </select>
 
-<label for="scheme">Scheme</label>
-<select id="scheme" title="Select Scheme">
+<label>Scheme</label>
+<select id="scheme">
     <option value="">Select Scheme</option>
 </select>
 
-<label for="semester">Semester</label>
-<select id="semester" title="Select Semester">
+<label>Semester</label>
+<select id="semester">
     <option value="">Select Semester</option>
 </select>
 
-<label for="course">Course</label>
-<select id="course" title="Select Course">
+<label>Course</label>
+<select id="course">
     <option value="">Select Course</option>
 </select>
 
-<!-- SYLLABUS DISPLAY -->
+<!-- SYLLABUS -->
 <div id="syllabus"></div>
 
 <!-- PROGRESS -->
@@ -90,8 +90,6 @@
 <script>
 document.addEventListener("DOMContentLoaded", () => {
 
-    const BASE = "http://127.0.0.1:5000";
-
     const uni = document.getElementById("university");
     const prog = document.getElementById("program");
     const stream = document.getElementById("stream");
@@ -100,8 +98,8 @@ document.addEventListener("DOMContentLoaded", () => {
     const course = document.getElementById("course");
     const syllabusDiv = document.getElementById("syllabus");
 
-    // ---------- Load Universities ----------
-    fetch(`${BASE}/api/universities`)
+    // ---------- LOAD UNIVERSITIES ----------
+    fetch("/api/universities")
         .then(res => res.json())
         .then(data => {
             data.forEach(u => {
@@ -109,10 +107,9 @@ document.addEventListener("DOMContentLoaded", () => {
             });
         });
 
-    // ---------- University → Program ----------
     uni.onchange = () => {
         resetBelow("program");
-        fetch(`${BASE}/api/programs?university_id=${uni.value}`)
+        fetch(`/api/programs?university_id=${uni.value}`)
             .then(res => res.json())
             .then(data => {
                 data.forEach(p => {
@@ -121,10 +118,9 @@ document.addEventListener("DOMContentLoaded", () => {
             });
     };
 
-    // ---------- Program → Stream / Scheme ----------
     prog.onchange = () => {
         resetBelow("stream");
-        fetch(`${BASE}/api/streams?program_id=${prog.value}`)
+        fetch(`/api/streams?program_id=${prog.value}`)
             .then(res => res.json())
             .then(data => {
                 if (data.length === 0) {
@@ -141,7 +137,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
     function loadSchemes(streamId="") {
         resetBelow("scheme");
-        let url = `${BASE}/api/schemes?program_id=${prog.value}`;
+        let url = `/api/schemes?program_id=${prog.value}`;
         if (streamId) url += `&stream_id=${streamId}`;
 
         fetch(url)
@@ -153,10 +149,9 @@ document.addEventListener("DOMContentLoaded", () => {
             });
     }
 
-    // ---------- Scheme → Semester ----------
     scheme.onchange = () => {
         resetBelow("semester");
-        fetch(`${BASE}/api/semesters?scheme_id=${scheme.value}`)
+        fetch(`/api/semesters?scheme_id=${scheme.value}`)
             .then(res => res.json())
             .then(data => {
                 data.forEach(s => {
@@ -165,10 +160,9 @@ document.addEventListener("DOMContentLoaded", () => {
             });
     };
 
-    // ---------- Semester → Course ----------
     sem.onchange = () => {
         resetBelow("course");
-        fetch(`${BASE}/api/courses?semester_id=${sem.value}`)
+        fetch(`/api/courses?semester_id=${sem.value}`)
             .then(res => res.json())
             .then(data => {
                 data.forEach(c => {
@@ -177,12 +171,14 @@ document.addEventListener("DOMContentLoaded", () => {
             });
     };
 
-    // ---------- Course → Syllabus ----------
+    // ---------- COURSE → SYLLABUS + PROGRESS ----------
     course.onchange = () => {
         syllabusDiv.innerHTML = "";
-        fetch(`${BASE}/api/syllabus?course_id=${course.value}`)
+
+        fetch(`/api/syllabus?course_id=${course.value}`)
             .then(res => res.json())
             .then(data => {
+
                 let total = 0;
 
                 data.forEach(m => {
@@ -191,22 +187,49 @@ document.addEventListener("DOMContentLoaded", () => {
                         total++;
                         syllabusDiv.innerHTML += `
                             <div class="topic">
-                                <input type="checkbox" class="topicCheck">
-                                ${t}
+                                <input type="checkbox"
+                                       class="topicCheck"
+                                       data-topic-id="${t.id}">
+                                ${t.name}
                             </div>
                         `;
                     });
                 });
 
-                const checks = document.querySelectorAll(".topicCheck");
-                checks.forEach(c => {
-                    c.onchange = () => {
-                        const completed = document.querySelectorAll(".topicCheck:checked").length;
-                        const percent = Math.round((completed / total) * 100);
-                        document.getElementById("progressText").innerText = percent + "%";
-                        document.getElementById("progressBar").style.width = percent + "%";
+                // LOAD SAVED PROGRESS
+                fetch(`/api/progress/${course.value}`)
+                    .then(res => res.json())
+                    .then(saved => {
+                        saved.forEach(p => {
+                            const cb = document.querySelector(
+                                `[data-topic-id="${p.topic_id}"]`
+                            );
+                            if (cb) cb.checked = p.completed;
+                        });
+                        updateProgress();
+                    });
+
+                // SAVE ON CHANGE
+                document.querySelectorAll(".topicCheck").forEach(cb => {
+                    cb.onchange = () => {
+                        fetch("/api/progress", {
+                            method: "POST",
+                            headers: {"Content-Type": "application/json"},
+                            body: JSON.stringify({
+                                topic_id: cb.dataset.topicId,
+                                completed: cb.checked
+                            })
+                        });
+                        updateProgress();
                     };
                 });
+
+                function updateProgress() {
+                    const done = document.querySelectorAll(".topicCheck:checked").length;
+                    const percent = Math.round((done / total) * 100);
+                    document.getElementById("progressText").innerText = percent + "%";
+                    document.getElementById("progressBar").style.width = percent + "%";
+                }
             });
     };
 
@@ -220,6 +243,7 @@ document.addEventListener("DOMContentLoaded", () => {
         document.getElementById("progressText").innerText = "0%";
         document.getElementById("progressBar").style.width = "0%";
     }
+
 });
 </script>
 

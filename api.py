@@ -9,6 +9,10 @@ from models import (
     Module,
     Topic
 )
+from flask import Blueprint, request, jsonify
+from models import db, UserProgress, Topic, Module
+
+api = Blueprint("api", __name__, url_prefix="/api")
 
 # ---------- API BLUEPRINT ----------
 api = Blueprint("api", __name__, url_prefix="/api")
@@ -92,7 +96,63 @@ def get_syllabus():
         data.append({
             "module": m.name,
             "hours": m.hours,
-            "topics": [t.name for t in m.topics]
+            "topics": [
+                {"id": t.id, "name": t.name}
+                for t in m.topics
+            ]
         })
 
     return jsonify(data)
+
+from models import UserProgress
+
+# ---------- SAVE PROGRESS ----------
+@api.route("/progress", methods=["POST"])
+def save_progress():
+    data = request.get_json()
+    print("🔥 SAVE ROUTE HIT:", data)
+
+    user_id = 1
+    topic_id = int(data["topic_id"])
+    completed = bool(data["completed"])
+
+    progress = UserProgress.query.filter_by(
+        user_id=user_id,
+        topic_id=topic_id
+    ).first()
+
+    if progress:
+        progress.completed = completed
+    else:
+        progress = UserProgress(
+            user_id=user_id,
+            topic_id=topic_id,
+            completed=completed
+        )
+        db.session.add(progress)
+
+    db.session.commit()
+    print("✅ SAVED TO DB")
+
+    return jsonify({"status": "saved"})
+
+
+
+
+# ---------- LOAD PROGRESS ----------
+@api.route("/progress/<int:course_id>")
+def load_progress(course_id):
+    user_id = 1  # TEMP
+
+    records = (
+        UserProgress.query
+        .join(Topic)
+        .join(Module)
+        .filter(Module.course_id == course_id)
+        .all()
+    )
+
+    return jsonify([
+        {"topic_id": r.topic_id, "completed": r.completed}
+        for r in records
+    ])
