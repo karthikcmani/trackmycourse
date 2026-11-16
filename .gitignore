@@ -9,5 +9,26 @@ __pycache__/
 instance/
 .env
 
-# SQLite database
+# SQLite databases
+*.db
 trackmycourse.db
+backups/
+
+# Dependencies and package managers
+node_modules/
+package.json
+package-lock.json
+
+# IDE / Editor configuration
+.vscode/
+.idea/
+
+# Binaries and compiled files
+*.exe
+*.o
+*.obj
+
+# Scratch files
+templates/sol.*
+templates/resume.html
+templates/a.exe
