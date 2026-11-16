@@ -3,7 +3,8 @@ from flask import Blueprint, jsonify, send_from_directory, abort
 
 file_api = Blueprint("file_api", __name__)
 
-BASE_FOLDER = r"D:\MCA2025-27\20MCA105 - ADVANCED DATA STRUCTURES"
+# BASE_FOLDER = r"D:\MCA2025-27\20MCA101 - MATHEMATICAL FOUNDATIONS FOR COMPUTING"
+BASE_FOLDER = r"D:\MCA2025-27\Semester-2\20MCA188 - ARTIFICIAL INTELLIGENCE"
 
 @file_api.route("/files", defaults={"subpath": ""})
 @file_api.route("/files/<path:subpath>")

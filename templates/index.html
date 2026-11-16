@@ -724,7 +724,7 @@
 <div class="layout">
     <!-- SIDEBAR -->
     <div id="sidebar">
-        <h3>ADS Files</h3>
+        <h3>AI Files</h3>
         <ul id="fileList"></ul>
     </div>
 
@@ -735,7 +735,7 @@
 
     <!-- RIGHT CONTENT -->
     <div style="flex:1" class="right-content">
-        <h3 onclick="loadCourse(3)">Advanced Data Structures</h3>
+        <h3 onclick="loadCourse(6)">Artificial Intelligence</h3>
         <div id="syllabus"></div>
 
         <div id="progressBox">
@@ -883,7 +883,7 @@ function loadCourse(courseId) {
 // Auto-load ADS syllabus on page load
 document.addEventListener("DOMContentLoaded", () => {
 
-    loadCourse(3);
+    loadCourse(6);
 });
 // Auto-load ADS syllabus on page load
 
@@ -924,6 +924,7 @@ function loadFiles(path = "") {
 
                 if (item.name.startsWith("~$")) return;
                 if (item.name.endsWith(".docx")) return;
+                if (item.name.endsWith(".ini")) return;
 
                 const li = document.createElement("li");
 
