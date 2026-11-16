@@ -1,0 +1,130 @@
+{% extends "base.html" %}
+
+{% block title %}TrackMyCourse — Unified Academic Progress Platform{% endblock %}
+
+{% block extra_head %}
+<style>
+    .hero-banner {
+        text-align: center;
+        padding: 60px 20px 40px;
+        background: linear-gradient(135deg, white 0%, #fbfdff 100%);
+        border-radius: var(--border-radius);
+        box-shadow: var(--shadow);
+        border: 1px solid rgba(0, 0, 0, 0.05);
+        margin-bottom: 40px;
+    }
+
+    .hero-title {
+        font-size: 2.8rem;
+        font-weight: 800;
+        color: var(--dark);
+        margin-bottom: 16px;
+        letter-spacing: -0.5px;
+    }
+
+    .hero-lead {
+        font-size: 1.15rem;
+        color: var(--gray);
+        max-width: 720px;
+        margin: 0 auto 30px;
+        line-height: 1.6;
+    }
+
+    .features-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+        gap: 25px;
+        margin-bottom: 40px;
+    }
+
+    .feature-card {
+        background: white;
+        padding: 30px 25px;
+        border-radius: var(--border-radius);
+        box-shadow: var(--shadow);
+        border: 1px solid rgba(0, 0, 0, 0.05);
+        transition: var(--transition);
+    }
+
+    .feature-card:hover {
+        transform: translateY(-4px);
+        box-shadow: var(--shadow-lg);
+    }
+
+    .feature-icon {
+        font-size: 2.2rem;
+        margin-bottom: 15px;
+        display: inline-block;
+    }
+
+    .feature-title {
+        font-size: 1.25rem;
+        font-weight: 700;
+        color: var(--dark);
+        margin-bottom: 10px;
+    }
+
+    .feature-desc {
+        color: var(--gray);
+        font-size: 0.92rem;
+        line-height: 1.5;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="hero-banner">
+    <div style="font-size: 3.5rem; margin-bottom: 15px;">🎓</div>
+    <h1 class="hero-title">Track Your Academic Progress with Certainty</h1>
+    <p class="hero-lead">
+        A unified academic management platform to explore university curriculums, track topic-level syllabus completion, organize study sessions, and master your academic journey.
+    </p>
+
+    <div style="display: flex; gap: 15px; justify-content: center; flex-wrap: wrap;">
+        <a href="{{ url_for('progress_view') }}" class="btn btn-primary" style="padding: 14px 28px; font-size: 1rem;">
+            🎯 Open Course Tracker &rarr;
+        </a>
+        <a href="{{ url_for('dashboard_view') }}" class="btn btn-secondary" style="padding: 14px 28px; font-size: 1rem;">
+            📊 Student Dashboard
+        </a>
+    </div>
+</div>
+
+<div class="features-grid">
+    <div class="feature-card">
+        <span class="feature-icon">🏛️</span>
+        <h3 class="feature-title">Verified University Curriculums</h3>
+        <p class="feature-desc">All syllabi are sourced directly from official university regulations and boards of studies. No fabricated courses or dummy content.</p>
+    </div>
+
+    <div class="feature-card">
+        <span class="feature-icon">🎯</span>
+        <h3 class="feature-title">Granular Topic Progress</h3>
+        <p class="feature-desc">Mark off completed topics module by module. Monitor your real completion percentage with live mathematical accuracy.</p>
+    </div>
+
+    <div class="feature-card">
+        <span class="feature-icon">🗓️</span>
+        <h3 class="feature-title">Study Planner & Time Tracker</h3>
+        <p class="feature-desc">Set deadlines for upcoming topics, log actual hours spent in study sessions, and review your weekly learning consistency.</p>
+    </div>
+
+    <div class="feature-card">
+        <span class="feature-icon">📝</span>
+        <h3 class="feature-title">Private Student Notes</h3>
+        <p class="feature-desc">Keep your personal revision notes, formulas, and algorithm takeaways safely organized and linked to courses and topics.</p>
+    </div>
+
+    <div class="feature-card">
+        <span class="feature-icon">📄</span>
+        <h3 class="feature-title">Syllabus Document Ingestion</h3>
+        <p class="feature-desc">Admins and students can upload official PDF, DOCX, or spreadsheet curriculum documents to extract structured academic syllabi.</p>
+    </div>
+
+    <div class="feature-card">
+        <span class="feature-icon">📈</span>
+        <h3 class="feature-title">Academic Insights & Analytics</h3>
+        <p class="feature-desc">Analyze your progress across semesters, remaining study workload, and weekly hours with genuine, calculated metrics.</p>
+    </div>
+</div>
+{% endblock %}

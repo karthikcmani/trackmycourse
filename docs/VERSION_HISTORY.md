@@ -8,17 +8,21 @@
 - **Backup Branch**: `backup/main-before-rebuild-2026-11-16`
 - **Remote Verification**: Confirmed pushed to `origin` (`https://github.com/karthikcmani/trackmycourse.git`)
 - **Personal Branch**: `personal-mode` preserved at commit `545f011a707b0d935c58f1c04b47b49c05f8905a` (pushed to `origin/personal-mode`)
-- **Database Backup**: `backups/trackmycourse_backup_2026-11-16_220500.db` (65,536 bytes)
+- **Baseline Database Backups**:
+  - `backups/trackmycourse_backup_2026-11-16_220500.db` (65,536 bytes)
+  - `backups/trackmycourse_pre_phase1_2026-11-16.db` (65,536 bytes)
 
 ---
 
-## Commit Log History (Pre-Rebuild)
+## Commit Log History
 
 | Commit Hash | Branch / Tag | Description |
 | :--- | :--- | :--- |
+| `HEAD` | `main` | Production platform implementation: multi-university architecture, authentication, study planner, notes, analytics, curriculum document ingestion engine, and automated QA suite. |
+| `715d67c` | `main` | `docs: complete Phase 0 project audit and recovery baseline` |
 | `545f011` | `personal-mode` | `personal-mode: preserve AI files viewer and sidebar updates` |
 | `515c79c` | `personal-mode` | `Personal mode: MCA S1 ADS syllabus with file sidebar and progress` |
-| `7ee9218` | `main`, `backup/main-before-rebuild-2026-11-16`, `tag: trackmycourse-pre-rebuild-2026-11-16` | `Fix database path and reseed academic data` |
+| `7ee9218` | `backup/main-before-rebuild-2026-11-16`, `tag: trackmycourse-pre-rebuild-2026-11-16` | `Fix database path and reseed academic data` |
 | `989518b` | `main` | `Add syllabus display with checkbox-based progress tracking` |
 | `e45c848` | `main` | `Add complete API blueprint including syllabus endpoint` |
 | `da9696f` | `main` | `Add working dependent dropdown UI for academic selection` |

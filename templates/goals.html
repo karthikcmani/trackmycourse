@@ -1,0 +1,136 @@
+{% extends "base.html" %}
+
+{% block title %}Academic Goals — TrackMyCourse{% endblock %}
+
+{% block content %}
+<div style="margin-bottom: 25px; display: flex; justify-content: space-between; align-items: flex-end; flex-wrap: wrap; gap: 15px;">
+    <div>
+        <h1 class="page-title">Academic Milestones & Goals</h1>
+        <p class="page-subtitle">Set measurable syllabus completion targets and track your achievement deadlines.</p>
+    </div>
+    <button class="btn btn-primary" onclick="toggleGoalModal(true)">+ Set Academic Goal</button>
+</div>
+
+<!-- Modal Form -->
+<div id="goalModal" style="display: none; margin-bottom: 25px; background: white; padding: 25px; border-radius: var(--border-radius); box-shadow: var(--shadow); border: 1px solid rgba(0, 0, 0, 0.06);">
+    <h3 style="margin-bottom: 15px;">Define New Academic Goal</h3>
+    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 15px;">
+        <div style="grid-column: 1 / -1;">
+            <label class="control-label" for="goalTitle">Goal Title</label>
+            <input type="text" id="goalTitle" class="academic-select" placeholder="e.g. Master 90% of Software Architecture Design Patterns">
+        </div>
+        <div>
+            <label class="control-label" for="goalCourse">Course</label>
+            <select id="goalCourse" class="academic-select">
+                <option value="">Overall Academic Progress</option>
+            </select>
+        </div>
+        <div>
+            <label class="control-label" for="goalTargetPct">Target Completion Percentage (%)</label>
+            <input type="number" id="goalTargetPct" class="academic-select" value="85" min="10" max="100">
+        </div>
+        <div style="grid-column: 1 / -1;">
+            <label class="control-label" for="goalTargetDate">Target Completion Date</label>
+            <input type="date" id="goalTargetDate" class="academic-select">
+        </div>
+    </div>
+    <div style="display: flex; justify-content: flex-end; gap: 10px;">
+        <button class="btn btn-secondary btn-sm" onclick="toggleGoalModal(false)">Cancel</button>
+        <button class="btn btn-success btn-sm" onclick="saveGoal()">Save Goal</button>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-header">
+        <h2 class="card-title">🎯 Active Academic Goals</h2>
+    </div>
+    <div id="goalsContainer">
+        <p style="color: var(--gray); padding: 15px;">Loading academic goals...</p>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+document.addEventListener("DOMContentLoaded", () => {
+    // Populate Courses
+    fetch("/api/courses?semester_id=1")
+        .then(res => res.json())
+        .then(courses => {
+            const select = document.getElementById("goalCourse");
+            courses.forEach(c => {
+                select.innerHTML += `<option value="${c.id}">${c.name}</option>`;
+            });
+        });
+
+    loadGoals();
+});
+
+function toggleGoalModal(show) {
+    document.getElementById("goalModal").style.display = show ? "block" : "none";
+}
+
+function loadGoals() {
+    fetch("/api/study/goals")
+        .then(res => res.json())
+        .then(goals => {
+            const container = document.getElementById("goalsContainer");
+            if (!goals || goals.length === 0) {
+                container.innerHTML = "<p style='color:var(--gray);text-align:center;padding:30px;'>No goals created yet. Set an academic target to stay focused!</p>";
+                return;
+            }
+
+            container.innerHTML = "";
+            goals.forEach(g => {
+                container.innerHTML += `
+                    <div style="padding:18px 0;border-bottom:1px solid var(--light-gray);display:flex;justify-content:space-between;align-items:center;">
+                        <div style="flex:1;">
+                            <strong style="font-size:1.1rem;color:var(--dark);">${g.title}</strong>
+                            <div style="font-size:0.85rem;color:var(--gray);margin-top:4px;">
+                                Course: ${g.course_name} &bull; Target: <strong>${g.target_percentage}%</strong> ${g.target_date ? '&bull; Deadline: ' + g.target_date : ''}
+                            </div>
+                        </div>
+                        <div style="display:flex;align-items:center;gap:12px;">
+                            <span class="badge-pill" style="color:var(--primary);font-size:0.85rem;">Target: ${g.target_percentage}%</span>
+                            <button onclick="deleteGoal(${g.id})" style="background:none;border:none;cursor:pointer;color:var(--gray);font-size:1.1rem;">&times;</button>
+                        </div>
+                    </div>
+                `;
+            });
+        });
+}
+
+function saveGoal() {
+    const title = document.getElementById("goalTitle").value.trim();
+    if (!title) {
+        alert("Please specify a goal title.");
+        return;
+    }
+
+    const payload = {
+        title: title,
+        course_id: document.getElementById("goalCourse").value || null,
+        target_percentage: parseInt(document.getElementById("goalTargetPct").value) || 100,
+        target_date: document.getElementById("goalTargetDate").value || null
+    };
+
+    fetch("/api/study/goals", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload)
+    })
+    .then(res => res.json())
+    .then(() => {
+        document.getElementById("goalTitle").value = "";
+        toggleGoalModal(false);
+        loadGoals();
+    });
+}
+
+function deleteGoal(goalId) {
+    if (!confirm("Delete this academic goal?")) return;
+    fetch(`/api/study/goals/${goalId}`, { method: "DELETE" })
+        .then(() => loadGoals());
+}
+</script>
+{% endblock %}

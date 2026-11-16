@@ -1,0 +1,186 @@
+{% extends "base.html" %}
+
+{% block title %}Learning Resources — TrackMyCourse{% endblock %}
+
+{% block extra_head %}
+<style>
+    .resource-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+        gap: 20px;
+    }
+
+    .resource-card {
+        background: white;
+        border-radius: var(--border-radius);
+        box-shadow: var(--shadow);
+        border: 1px solid rgba(0, 0, 0, 0.05);
+        padding: 22px;
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
+        transition: var(--transition);
+    }
+
+    .resource-card:hover {
+        transform: translateY(-4px);
+        box-shadow: var(--shadow-lg);
+    }
+
+    .resource-type-badge {
+        font-size: 0.75rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        padding: 3px 10px;
+        border-radius: 50px;
+    }
+
+    .type-pdf { background: #ffebee; color: #c62828; }
+    .type-video { background: #e3f2fd; color: #1565c0; }
+    .type-article { background: #e8f5e9; color: #2e7d32; }
+    .type-github { background: #ede7f6; color: #512da8; }
+    .type-link { background: #fff3e0; color: #ef6c00; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div style="margin-bottom: 25px; display: flex; justify-content: space-between; align-items: flex-end; flex-wrap: wrap; gap: 15px;">
+    <div>
+        <h1 class="page-title">Learning Resources & Materials</h1>
+        <p class="page-subtitle">Curated curriculum reference links, video playlists, official PDFs, and practice guides.</p>
+    </div>
+    <button class="btn btn-primary" onclick="toggleResourceModal(true)">+ Add Resource Link</button>
+</div>
+
+<!-- Modal Form -->
+<div id="resourceModal" style="display: none; margin-bottom: 25px; background: white; padding: 25px; border-radius: var(--border-radius); box-shadow: var(--shadow); border: 1px solid rgba(0, 0, 0, 0.06);">
+    <h3 style="margin-bottom: 15px;">Save Learning Resource</h3>
+    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 15px;">
+        <div>
+            <label class="control-label" for="resTitle">Title</label>
+            <input type="text" id="resTitle" class="academic-select" placeholder="e.g. MIT OpenCourseWare: Distributed Systems">
+        </div>
+        <div>
+            <label class="control-label" for="resUrl">Resource URL</label>
+            <input type="url" id="resUrl" class="academic-select" placeholder="https://...">
+        </div>
+        <div>
+            <label class="control-label" for="resCourse">Course</label>
+            <select id="resCourse" class="academic-select">
+                <option value="">General Resource</option>
+            </select>
+        </div>
+        <div>
+            <label class="control-label" for="resType">Resource Type</label>
+            <select id="resType" class="academic-select">
+                <option value="link">Web Article / Link</option>
+                <option value="pdf">Document / PDF</option>
+                <option value="video">Lecture / Video</option>
+                <option value="github">Source Code / GitHub</option>
+                <option value="book">Reference Textbook</option>
+            </select>
+        </div>
+    </div>
+    <div style="display: flex; justify-content: flex-end; gap: 10px;">
+        <button class="btn btn-secondary btn-sm" onclick="toggleResourceModal(false)">Cancel</button>
+        <button class="btn btn-success btn-sm" onclick="saveResource()">Save Resource</button>
+    </div>
+</div>
+
+<div class="resource-grid" id="resourcesGrid">
+    <p style="color: var(--gray); padding: 20px;">Loading learning resources...</p>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+document.addEventListener("DOMContentLoaded", () => {
+    // Populate Courses
+    fetch("/api/courses?semester_id=1")
+        .then(res => res.json())
+        .then(courses => {
+            const select = document.getElementById("resCourse");
+            courses.forEach(c => {
+                select.innerHTML += `<option value="${c.id}">${c.name}</option>`;
+            });
+        });
+
+    loadResources();
+});
+
+function toggleResourceModal(show) {
+    document.getElementById("resourceModal").style.display = show ? "block" : "none";
+}
+
+function loadResources() {
+    fetch("/api/study/resources")
+        .then(res => res.json())
+        .then(resources => {
+            const container = document.getElementById("resourcesGrid");
+            if (!resources || resources.length === 0) {
+                container.innerHTML = "<p style='color:var(--gray);text-align:center;padding:30px;grid-column:1/-1;'>No resources saved yet. Add your favorite course references!</p>";
+                return;
+            }
+
+            container.innerHTML = "";
+            resources.forEach(r => {
+                const typeClass = `type-${r.resource_type || 'link'}`;
+                container.innerHTML += `
+                    <div class="resource-card">
+                        <div>
+                            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+                                <span class="resource-type-badge ${typeClass}">${r.resource_type}</span>
+                                ${r.is_official ? '<span style="font-size:0.75rem;font-weight:700;color:var(--success);">⭐ Official</span>' : ''}
+                            </div>
+                            <h3 style="font-size:1.15rem;font-weight:700;color:var(--dark);margin-bottom:8px;line-height:1.3;">${r.title}</h3>
+                            <div style="font-size:0.85rem;color:var(--gray);margin-bottom:15px;">${r.course_name || 'General Curriculum'}</div>
+                        </div>
+                        <div style="display:flex;justify-content:space-between;align-items:center;border-top:1px solid var(--light-gray);padding-top:14px;">
+                            <a href="${r.url}" target="_blank" rel="noopener noreferrer" class="btn btn-secondary btn-sm">
+                                Open Link &nearr;
+                            </a>
+                            ${!r.is_official ? `<button onclick="deleteResource(${r.id})" style="background:none;border:none;cursor:pointer;color:var(--gray);font-size:1.1rem;">&times;</button>` : ''}
+                        </div>
+                    </div>
+                `;
+            });
+        });
+}
+
+function saveResource() {
+    const title = document.getElementById("resTitle").value.trim();
+    const url = document.getElementById("resUrl").value.trim();
+
+    if (!title || !url) {
+        alert("Please provide both title and URL.");
+        return;
+    }
+
+    const payload = {
+        title: title,
+        url: url,
+        course_id: document.getElementById("resCourse").value || null,
+        resource_type: document.getElementById("resType").value
+    };
+
+    fetch("/api/study/resources", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload)
+    })
+    .then(res => res.json())
+    .then(() => {
+        document.getElementById("resTitle").value = "";
+        document.getElementById("resUrl").value = "";
+        toggleResourceModal(false);
+        loadResources();
+    });
+}
+
+function deleteResource(resId) {
+    if (!confirm("Remove this resource?")) return;
+    fetch(`/api/study/resources/${resId}`, { method: "DELETE" })
+        .then(() => loadResources());
+}
+</script>
+{% endblock %}

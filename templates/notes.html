@@ -1,0 +1,242 @@
+{% extends "base.html" %}
+
+{% block title %}Student Notes — TrackMyCourse{% endblock %}
+
+{% block extra_head %}
+<style>
+    .notes-layout {
+        display: grid;
+        grid-template-columns: 1fr 1.6fr;
+        gap: 25px;
+    }
+
+    @media (max-width: 900px) {
+        .notes-layout { grid-template-columns: 1fr; }
+    }
+
+    .notes-sidebar-item {
+        background: white;
+        border: 1px solid var(--light-gray);
+        border-radius: 10px;
+        padding: 14px 18px;
+        margin-bottom: 10px;
+        cursor: pointer;
+        transition: var(--transition);
+    }
+
+    .notes-sidebar-item:hover, .notes-sidebar-item.active {
+        border-color: var(--primary);
+        background: #fbfdff;
+        transform: translateX(4px);
+    }
+
+    .notes-sidebar-item.active {
+        border-left: 4px solid var(--primary);
+    }
+
+    .note-editor-card {
+        background: white;
+        border-radius: var(--border-radius);
+        box-shadow: var(--shadow);
+        padding: 25px;
+        border: 1px solid rgba(0, 0, 0, 0.05);
+    }
+
+    .note-textarea {
+        width: 100%;
+        min-height: 300px;
+        padding: 14px;
+        border-radius: 8px;
+        border: 1.5px solid var(--light-gray);
+        font-family: inherit;
+        font-size: 0.95rem;
+        outline: none;
+        resize: vertical;
+        transition: var(--transition);
+        margin-bottom: 15px;
+    }
+
+    .note-textarea:focus {
+        border-color: var(--primary);
+        box-shadow: 0 0 0 3px rgba(67, 97, 238, 0.15);
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div style="margin-bottom: 25px; display: flex; justify-content: space-between; align-items: flex-end;">
+    <div>
+        <h1 class="page-title">Personal Student Notes</h1>
+        <p class="page-subtitle">Capture topic summaries, key concepts, formulas, and revision memos.</p>
+    </div>
+    <button class="btn btn-primary" onclick="newNote()">+ New Note</button>
+</div>
+
+<div class="notes-layout">
+    <!-- Notes List -->
+    <div>
+        <div class="card" style="padding: 18px;">
+            <select id="courseFilter" class="academic-select" style="margin-bottom: 15px;" onchange="loadNotes()">
+                <option value="">All Courses</option>
+            </select>
+
+            <div id="notesList">
+                <p style="color: var(--gray); padding: 15px;">Loading notes...</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Note Editor / Viewer -->
+    <div>
+        <div class="note-editor-card">
+            <input type="hidden" id="currentNoteId" value="">
+
+            <div style="margin-bottom: 15px;">
+                <label class="control-label" for="noteTitle">Note Title</label>
+                <input type="text" id="noteTitle" class="academic-select" placeholder="e.g. Master Method for Recurrences">
+            </div>
+
+            <div style="margin-bottom: 15px;">
+                <label class="control-label" for="noteCourse">Associated Course</label>
+                <select id="noteCourse" class="academic-select">
+                    <option value="">General Note (No Course)</option>
+                </select>
+            </div>
+
+            <div>
+                <label class="control-label" for="noteContent">Content</label>
+                <textarea id="noteContent" class="note-textarea" placeholder="Write your revision notes, algorithm steps, or key takeaways here..."></textarea>
+            </div>
+
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+                <button class="btn btn-danger btn-sm" id="btnDeleteNote" onclick="deleteCurrentNote()" style="display: none;">Delete</button>
+                <div style="display: flex; gap: 10px; margin-left: auto;">
+                    <button class="btn btn-secondary btn-sm" onclick="newNote()">Clear</button>
+                    <button class="btn btn-primary btn-sm" onclick="saveNote()">Save Note</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+let allNotes = [];
+
+document.addEventListener("DOMContentLoaded", () => {
+    // Populate Courses
+    fetch("/api/courses?semester_id=1")
+        .then(res => res.json())
+        .then(courses => {
+            const filter = document.getElementById("courseFilter");
+            const select = document.getElementById("noteCourse");
+            courses.forEach(c => {
+                const opt = `<option value="${c.id}">${c.name}</option>`;
+                filter.innerHTML += opt;
+                select.innerHTML += opt;
+            });
+        });
+
+    loadNotes();
+});
+
+function loadNotes() {
+    const courseId = document.getElementById("courseFilter").value;
+    let url = "/api/study/notes";
+    if (courseId) url += `?course_id=${courseId}`;
+
+    fetch(url)
+        .then(res => res.json())
+        .then(notes => {
+            allNotes = notes;
+            const container = document.getElementById("notesList");
+            if (!notes || notes.length === 0) {
+                container.innerHTML = "<p style='color:var(--gray);text-align:center;padding:20px;'>No notes found. Create your first note!</p>";
+                return;
+            }
+
+            container.innerHTML = "";
+            notes.forEach((n, idx) => {
+                container.innerHTML += `
+                    <div class="notes-sidebar-item ${idx === 0 ? 'active' : ''}" onclick="selectNote(${n.id}, this)">
+                        <strong style="font-size:0.95rem;color:var(--dark);display:block;margin-bottom:4px;">${n.title}</strong>
+                        <div style="font-size:0.8rem;color:var(--gray);">${n.course_name} &bull; ${n.updated_at}</div>
+                    </div>
+                `;
+            });
+
+            if (notes.length > 0) {
+                populateEditor(notes[0]);
+            }
+        });
+}
+
+function selectNote(noteId, element) {
+    document.querySelectorAll(".notes-sidebar-item").forEach(el => el.classList.remove("active"));
+    if (element) element.classList.add("active");
+
+    const note = allNotes.find(n => n.id === noteId);
+    if (note) populateEditor(note);
+}
+
+function populateEditor(note) {
+    document.getElementById("currentNoteId").value = note.id;
+    document.getElementById("noteTitle").value = note.title;
+    document.getElementById("noteCourse").value = note.course_id || "";
+    document.getElementById("noteContent").value = note.content;
+    document.getElementById("btnDeleteNote").style.display = "inline-flex";
+}
+
+function newNote() {
+    document.getElementById("currentNoteId").value = "";
+    document.getElementById("noteTitle").value = "";
+    document.getElementById("noteCourse").value = "";
+    document.getElementById("noteContent").value = "";
+    document.getElementById("btnDeleteNote").style.display = "none";
+    document.querySelectorAll(".notes-sidebar-item").forEach(el => el.classList.remove("active"));
+}
+
+function saveNote() {
+    const noteId = document.getElementById("currentNoteId").value;
+    const title = document.getElementById("noteTitle").value.trim();
+    const content = document.getElementById("noteContent").value.trim();
+    const courseId = document.getElementById("noteCourse").value;
+
+    if (!title || !content) {
+        alert("Please enter a note title and content.");
+        return;
+    }
+
+    const payload = {
+        title: title,
+        content: content,
+        course_id: courseId || null
+    };
+
+    const url = noteId ? `/api/study/notes/${noteId}` : "/api/study/notes";
+    const method = noteId ? "PUT" : "POST";
+
+    fetch(url, {
+        method: method,
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload)
+    })
+    .then(res => res.json())
+    .then(() => {
+        loadNotes();
+    });
+}
+
+function deleteCurrentNote() {
+    const noteId = document.getElementById("currentNoteId").value;
+    if (!noteId || !confirm("Are you sure you want to delete this note?")) return;
+
+    fetch(`/api/study/notes/${noteId}`, { method: "DELETE" })
+        .then(() => {
+            newNote();
+            loadNotes();
+        });
+}
+</script>
+{% endblock %}

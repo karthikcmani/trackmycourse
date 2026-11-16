@@ -1,0 +1,336 @@
+{% extends "base.html" %}
+
+{% block title %}Study Planner & Sessions — TrackMyCourse{% endblock %}
+
+{% block extra_head %}
+<style>
+    .planner-split {
+        display: grid;
+        grid-template-columns: 1.2fr 1fr;
+        gap: 25px;
+    }
+
+    @media (max-width: 900px) {
+        .planner-split { grid-template-columns: 1fr; }
+    }
+
+    .task-item {
+        background: white;
+        border: 1px solid var(--light-gray);
+        border-radius: 10px;
+        padding: 14px 18px;
+        margin-bottom: 10px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        transition: var(--transition);
+    }
+
+    .task-item:hover {
+        border-color: rgba(67, 97, 238, 0.3);
+        transform: translateX(4px);
+    }
+
+    .task-completed {
+        background: #f8fafc;
+        opacity: 0.7;
+    }
+
+    .task-completed .task-title {
+        text-decoration: line-through;
+        color: var(--gray);
+    }
+
+    .task-meta {
+        font-size: 0.82rem;
+        color: var(--gray);
+        margin-top: 4px;
+        display: flex;
+        gap: 12px;
+    }
+
+    .priority-badge {
+        font-size: 0.72rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        padding: 2px 8px;
+        border-radius: 4px;
+    }
+
+    .priority-high { background: #ffebee; color: #c62828; }
+    .priority-medium { background: #fff3e0; color: #ef6c00; }
+    .priority-low { background: #e8f5e9; color: #2e7d32; }
+
+    .session-item {
+        padding: 14px 0;
+        border-bottom: 1px solid var(--light-gray);
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+
+    .session-item:last-child {
+        border-bottom: none;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div style="margin-bottom: 25px;">
+    <h1 class="page-title">Study Planner & Sessions</h1>
+    <p class="page-subtitle">Organize your study goals, set task deadlines, and record your actual study hours.</p>
+</div>
+
+<div class="planner-split">
+    <!-- STUDY TASKS -->
+    <div>
+        <div class="card">
+            <div class="card-header">
+                <h2 class="card-title">📝 Study Tasks</h2>
+                <button class="btn btn-primary btn-sm" onclick="toggleTaskModal(true)">+ Add Task</button>
+            </div>
+
+            <!-- Task Creation Form -->
+            <div id="taskFormContainer" style="display: none; margin-bottom: 20px; background: #f8fafc; padding: 18px; border-radius: 10px; border: 1px solid var(--light-gray);">
+                <h4 style="margin-bottom: 12px;">Create New Study Task</h4>
+                <div style="display: flex; flex-direction: column; gap: 12px;">
+                    <input type="text" id="taskTitle" class="academic-select" placeholder="Task Title (e.g. Complete Red-Black Trees Practice)">
+                    
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+                        <select id="taskCourse" class="academic-select">
+                            <option value="">Link to Course (Optional)</option>
+                        </select>
+                        <input type="date" id="taskDueDate" class="academic-select">
+                    </div>
+
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                        <select id="taskPriority" class="academic-select" style="width: 140px;">
+                            <option value="medium">Medium Priority</option>
+                            <option value="high">High Priority</option>
+                            <option value="low">Low Priority</option>
+                        </select>
+                        <div>
+                            <button class="btn btn-secondary btn-sm" onclick="toggleTaskModal(false)">Cancel</button>
+                            <button class="btn btn-success btn-sm" onclick="saveTask()">Save Task</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Task Filter Tabs -->
+            <div style="display: flex; gap: 10px; margin-bottom: 15px;">
+                <button class="btn btn-secondary btn-sm" id="filterAll" onclick="loadTasks()">All</button>
+                <button class="btn btn-secondary btn-sm" id="filterPending" onclick="loadTasks('pending')">Pending</button>
+                <button class="btn btn-secondary btn-sm" id="filterDone" onclick="loadTasks('completed')">Completed</button>
+            </div>
+
+            <div id="tasksList">
+                <p style="color: var(--gray); padding: 15px;">Loading study tasks...</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- STUDY SESSIONS LOG -->
+    <div>
+        <div class="card">
+            <div class="card-header">
+                <h2 class="card-title">⏱️ Log Study Session</h2>
+            </div>
+
+            <div style="display: flex; flex-direction: column; gap: 14px; margin-bottom: 25px;">
+                <div>
+                    <label class="control-label" for="sessionCourse">Course Studied</label>
+                    <select id="sessionCourse" class="academic-select">
+                        <option value="">General Study (No Specific Course)</option>
+                    </select>
+                </div>
+
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+                    <div>
+                        <label class="control-label" for="sessionDuration">Duration (Minutes)</label>
+                        <input type="number" id="sessionDuration" class="academic-select" value="45" min="5" step="5">
+                    </div>
+                    <div>
+                        <label class="control-label" for="sessionDate">Date</label>
+                        <input type="date" id="sessionDate" class="academic-select">
+                    </div>
+                </div>
+
+                <div>
+                    <label class="control-label" for="sessionNotes">Notes / Topics Covered</label>
+                    <input type="text" id="sessionNotes" class="academic-select" placeholder="What did you study during this session?">
+                </div>
+
+                <button class="btn btn-primary" onclick="logStudySession()" style="justify-content: center;">
+                    Log Study Session &rarr;
+                </button>
+            </div>
+
+            <h3 style="font-size: 1.05rem; font-weight: 700; margin-bottom: 12px; color: var(--dark); border-top: 1px solid var(--light-gray); padding-top: 15px;">
+                Recent Study Sessions
+            </h3>
+            <div id="sessionsHistory">
+                <p style="color: var(--gray); font-size: 0.9rem;">Loading session records...</p>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+document.addEventListener("DOMContentLoaded", () => {
+    document.getElementById("sessionDate").value = new Date().toISOString().split('T')[0];
+
+    // Populate Courses in Dropdowns
+    fetch("/api/courses?semester_id=1")
+        .then(res => res.json())
+        .then(courses => {
+            const tSelect = document.getElementById("taskCourse");
+            const sSelect = document.getElementById("sessionCourse");
+            courses.forEach(c => {
+                const opt = `<option value="${c.id}">${c.name}</option>`;
+                tSelect.innerHTML += opt;
+                sSelect.innerHTML += opt;
+            });
+        });
+
+    loadTasks();
+    loadSessions();
+});
+
+function toggleTaskModal(show) {
+    document.getElementById("taskFormContainer").style.display = show ? "block" : "none";
+}
+
+function loadTasks(status = "") {
+    let url = "/api/study/tasks";
+    if (status) url += `?status=${status}`;
+
+    fetch(url)
+        .then(res => res.json())
+        .then(tasks => {
+            const container = document.getElementById("tasksList");
+            if (!tasks || tasks.length === 0) {
+                container.innerHTML = "<p style='color:var(--gray);padding:20px;text-align:center;'>No study tasks found.</p>";
+                return;
+            }
+
+            container.innerHTML = "";
+            tasks.forEach(t => {
+                const isCompleted = t.status === "completed";
+                const isOverdue = t.is_overdue;
+
+                container.innerHTML += `
+                    <div class="task-item ${isCompleted ? 'task-completed' : ''}">
+                        <div style="display:flex;align-items:center;gap:12px;flex:1;">
+                            <input type="checkbox"
+                                   style="width:18px;height:18px;cursor:pointer;"
+                                   ${isCompleted ? 'checked' : ''}
+                                   onchange="toggleTask(${t.id})">
+                            <div>
+                                <div class="task-title" style="font-weight:600;font-size:0.95rem;">${t.title}</div>
+                                <div class="task-meta">
+                                    <span>${t.course_name || 'General'}</span>
+                                    ${t.due_date ? `<span style="${isOverdue ? 'color:var(--danger);font-weight:700;' : ''}">Due: ${t.due_date} ${isOverdue ? '(Overdue)' : ''}</span>` : ''}
+                                    <span class="priority-badge priority-${t.priority}">${t.priority}</span>
+                                </div>
+                            </div>
+                        </div>
+                        <button onclick="deleteTask(${t.id})" style="background:none;border:none;cursor:pointer;color:var(--gray);font-size:1.1rem;">&times;</button>
+                    </div>
+                `;
+            });
+        });
+}
+
+function saveTask() {
+    const title = document.getElementById("taskTitle").value.trim();
+    if (!title) {
+        alert("Please enter a task title.");
+        return;
+    }
+
+    const payload = {
+        title: title,
+        course_id: document.getElementById("taskCourse").value || null,
+        due_date: document.getElementById("taskDueDate").value || null,
+        priority: document.getElementById("taskPriority").value
+    };
+
+    fetch("/api/study/tasks", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload)
+    })
+    .then(res => res.json())
+    .then(() => {
+        document.getElementById("taskTitle").value = "";
+        toggleTaskModal(false);
+        loadTasks();
+    });
+}
+
+function toggleTask(taskId) {
+    fetch(`/api/study/tasks/${taskId}/toggle`, { method: "POST" })
+        .then(() => loadTasks());
+}
+
+function deleteTask(taskId) {
+    if (!confirm("Delete this task?")) return;
+    fetch(`/api/study/tasks/${taskId}`, { method: "DELETE" })
+        .then(() => loadTasks());
+}
+
+function loadSessions() {
+    fetch("/api/study/sessions?limit=10")
+        .then(res => res.json())
+        .then(sessions => {
+            const container = document.getElementById("sessionsHistory");
+            if (!sessions || sessions.length === 0) {
+                container.innerHTML = "<p style='color:var(--gray);font-size:0.88rem;'>No study sessions logged yet.</p>";
+                return;
+            }
+
+            container.innerHTML = "";
+            sessions.forEach(s => {
+                container.innerHTML += `
+                    <div class="session-item">
+                        <div>
+                            <strong style="font-size:0.92rem;">${s.course_name}</strong>
+                            <div style="font-size:0.8rem;color:var(--gray);">${s.session_date} &bull; ${s.notes || 'Independent Study'}</div>
+                        </div>
+                        <span class="badge-pill" style="color:var(--primary);">${s.duration_minutes} mins</span>
+                    </div>
+                `;
+            });
+        });
+}
+
+function logStudySession() {
+    const duration = parseInt(document.getElementById("sessionDuration").value);
+    if (!duration || duration <= 0) {
+        alert("Please specify study duration.");
+        return;
+    }
+
+    const payload = {
+        course_id: document.getElementById("sessionCourse").value || null,
+        duration_minutes: duration,
+        session_date: document.getElementById("sessionDate").value,
+        notes: document.getElementById("sessionNotes").value.trim()
+    };
+
+    fetch("/api/study/sessions", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload)
+    })
+    .then(res => res.json())
+    .then(() => {
+        document.getElementById("sessionNotes").value = "";
+        loadSessions();
+    });
+}
+</script>
+{% endblock %}

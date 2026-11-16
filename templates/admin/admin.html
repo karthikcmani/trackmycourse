@@ -1,0 +1,320 @@
+{% extends "base.html" %}
+
+{% block title %}Administration Portal — TrackMyCourse{% endblock %}
+
+{% block extra_head %}
+<style>
+    .admin-tabs {
+        display: flex;
+        gap: 12px;
+        margin-bottom: 25px;
+        border-bottom: 2px solid var(--light-gray);
+        padding-bottom: 10px;
+    }
+
+    .admin-tab {
+        padding: 8px 18px;
+        border-radius: 8px;
+        background: none;
+        border: none;
+        font-weight: 600;
+        cursor: pointer;
+        color: var(--gray);
+        transition: var(--transition);
+    }
+
+    .admin-tab.active {
+        background: var(--primary);
+        color: white;
+    }
+
+    .upload-dropzone {
+        border: 2px dashed rgba(67, 97, 238, 0.3);
+        border-radius: var(--border-radius);
+        padding: 40px 20px;
+        text-align: center;
+        background: #fbfdff;
+        cursor: pointer;
+        transition: var(--transition);
+        margin-bottom: 20px;
+    }
+
+    .upload-dropzone:hover {
+        border-color: var(--primary);
+        background: rgba(67, 97, 238, 0.04);
+    }
+
+    .preview-box {
+        background: #f8fafc;
+        border-radius: 10px;
+        padding: 20px;
+        border: 1px solid var(--light-gray);
+        margin-top: 20px;
+    }
+
+    .preview-tree {
+        font-family: monospace;
+        font-size: 0.9rem;
+        background: #1e1e1e;
+        color: #d4d4d4;
+        padding: 16px;
+        border-radius: 8px;
+        max-height: 400px;
+        overflow-y: auto;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div style="margin-bottom: 25px;">
+    <h1 class="page-title">Academic Administration & Curriculum Portal</h1>
+    <p class="page-subtitle">Acquire, parse, verify, and publish official curriculum documents into the academic catalog.</p>
+</div>
+
+<div class="admin-tabs">
+    <button class="admin-tab active" onclick="switchTab('import')">📥 Syllabus Document Ingestion</button>
+    <button class="admin-tab" onclick="switchTab('provenance')">📜 Provenance Sources</button>
+    <button class="admin-tab" onclick="switchTab('users')">👥 User Administration</button>
+</div>
+
+<!-- TAB 1: SYLLABUS IMPORT & EXTRACTION -->
+<div id="tab-import" class="tab-content">
+    <div class="card">
+        <div class="card-header">
+            <h2 class="card-title">📄 Official Syllabus Document Upload & Extraction</h2>
+            <span class="badge-pill" style="color: var(--primary);">Supports PDF, DOCX, XLSX, JSON</span>
+        </div>
+
+        <form id="uploadForm" enctype="multipart/form-data">
+            <div class="upload-dropzone" onclick="document.getElementById('documentFile').click()">
+                <div style="font-size: 2.5rem; margin-bottom: 10px;">📁</div>
+                <h3 style="font-size: 1.15rem; color: var(--dark); margin-bottom: 6px;">Select or Drop Curriculum Document</h3>
+                <p style="color: var(--gray); font-size: 0.88rem;">Accepts official curriculum PDFs, DOCX regulations, or course spreadsheets.</p>
+                <input type="file" id="documentFile" name="document" accept=".pdf,.docx,.xlsx,.csv,.json" style="display: none;" onchange="updateFileName(this)">
+                <div id="selectedFileName" style="margin-top: 10px; font-weight: 700; color: var(--primary);"></div>
+            </div>
+
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 15px; margin-bottom: 20px;">
+                <div>
+                    <label class="control-label" for="metaUni">University</label>
+                    <input type="text" id="metaUni" name="university_name" class="academic-select" value="APJ Abdul Kalam Technological University">
+                </div>
+                <div>
+                    <label class="control-label" for="metaProg">Program</label>
+                    <input type="text" id="metaProg" name="program_name" class="academic-select" value="MCA">
+                </div>
+                <div>
+                    <label class="control-label" for="metaScheme">Scheme Year</label>
+                    <input type="text" id="metaScheme" name="scheme_year" class="academic-select" value="2021">
+                </div>
+                <div>
+                    <label class="control-label" for="metaSem">Semester</label>
+                    <input type="number" id="metaSem" name="semester_no" class="academic-select" value="1" min="1" max="10">
+                </div>
+                <div style="grid-column: 1 / -1;">
+                    <label class="control-label" for="metaSourceUrl">Official Verification Source URL</label>
+                    <input type="url" id="metaSourceUrl" name="source_url" class="academic-select" placeholder="https://university.edu/syllabus/official-curriculum.pdf">
+                </div>
+            </div>
+
+            <button type="button" class="btn btn-primary" onclick="uploadAndExtract()" id="btnExtract" style="padding: 12px 24px;">
+                Extract & Parse Syllabus &rarr;
+            </button>
+        </form>
+
+        <!-- EXTRACTION PREVIEW WORKFLOW -->
+        <div id="extractionPreviewBox" class="preview-box" style="display: none;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+                <h3 style="font-size: 1.2rem; color: var(--dark); font-weight: 700;">Extraction Preview</h3>
+                <button class="btn btn-success btn-sm" id="btnPublish" onclick="publishExtraction()">
+                    ✓ Approve & Publish to Academic Catalog
+                </button>
+            </div>
+            <p style="font-size: 0.88rem; color: var(--gray); margin-bottom: 15px;">
+                Review the extracted academic hierarchy below before publishing it to the shared academic catalog.
+            </p>
+            <input type="hidden" id="currentImportId" value="">
+            <pre class="preview-tree" id="previewTree"></pre>
+        </div>
+    </div>
+</div>
+
+<!-- TAB 2: PROVENANCE SOURCES -->
+<div id="tab-provenance" class="tab-content" style="display: none;">
+    <div class="card">
+        <div class="card-header">
+            <h2 class="card-title">📜 Verified Curriculum Sources</h2>
+        </div>
+        <div id="adminSourcesList">
+            <p style="color: var(--gray); padding: 15px;">Loading sources...</p>
+        </div>
+    </div>
+</div>
+
+<!-- TAB 3: USER ADMINISTRATION -->
+<div id="tab-users" class="tab-content" style="display: none;">
+    <div class="card">
+        <div class="card-header">
+            <h2 class="card-title">👥 User Management</h2>
+        </div>
+        <div style="overflow-x: auto;">
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Name</th>
+                        <th>Email</th>
+                        <th>Role</th>
+                        <th>Status</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody id="userTableBody">
+                    <tr><td colspan="6" style="padding: 20px; text-align: center; color: var(--gray);">Loading users...</td></tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+let activeTab = 'import';
+
+function switchTab(tab) {
+    document.querySelectorAll(".admin-tab").forEach(t => t.classList.remove("active"));
+    document.querySelectorAll(".tab-content").forEach(c => c.style.display = "none");
+
+    if (tab === 'import') {
+        document.getElementById("tab-import").style.display = "block";
+    } else if (tab === 'provenance') {
+        document.getElementById("tab-provenance").style.display = "block";
+        loadAdminSources();
+    } else if (tab === 'users') {
+        document.getElementById("tab-users").style.display = "block";
+        loadAdminUsers();
+    }
+    event.target.classList.add("active");
+}
+
+function updateFileName(input) {
+    const nameEl = document.getElementById("selectedFileName");
+    if (input.files && input.files.length > 0) {
+        nameEl.innerText = `Selected: ${input.files[0].name} (${Math.round(input.files[0].size / 1024)} KB)`;
+    }
+}
+
+function uploadAndExtract() {
+    const fileInput = document.getElementById("documentFile");
+    if (!fileInput.files || fileInput.files.length === 0) {
+        alert("Please select a curriculum document file to upload.");
+        return;
+    }
+
+    const formData = new FormData(document.getElementById("uploadForm"));
+    const btn = document.getElementById("btnExtract");
+    btn.disabled = true;
+    btn.innerText = "Extracting Academic Hierarchy...";
+
+    fetch("/api/admin/syllabus/upload", {
+        method: "POST",
+        body: formData
+    })
+    .then(res => res.json())
+    .then(data => {
+        btn.disabled = false;
+        btn.innerText = "Extract & Parse Syllabus →";
+
+        if (data.error) {
+            alert(`Error: ${data.error}`);
+            return;
+        }
+
+        document.getElementById("currentImportId").value = data.import_id;
+        document.getElementById("previewTree").innerText = JSON.stringify(data.preview, null, 2);
+        document.getElementById("extractionPreviewBox").style.display = "block";
+    })
+    .catch(err => {
+        btn.disabled = false;
+        btn.innerText = "Extract & Parse Syllabus →";
+        alert(`Failed to upload: ${err.message}`);
+    });
+}
+
+function publishExtraction() {
+    const importId = document.getElementById("currentImportId").value;
+    if (!importId) return;
+
+    const btn = document.getElementById("btnPublish");
+    btn.disabled = true;
+    btn.innerText = "Publishing...";
+
+    fetch(`/api/admin/syllabus/publish/${importId}`, { method: "POST" })
+        .then(res => res.json())
+        .then(data => {
+            btn.disabled = false;
+            btn.innerText = "✓ Published!";
+            alert(data.message || "Syllabus published successfully!");
+            document.getElementById("extractionPreviewBox").style.display = "none";
+        })
+        .catch(err => {
+            btn.disabled = false;
+            btn.innerText = "✓ Approve & Publish to Academic Catalog";
+            alert(`Failed to publish: ${err.message}`);
+        });
+}
+
+function loadAdminSources() {
+    fetch("/api/admin/sources")
+        .then(res => res.json())
+        .then(sources => {
+            const container = document.getElementById("adminSourcesList");
+            container.innerHTML = "";
+            sources.forEach(s => {
+                container.innerHTML += `
+                    <div style="padding:16px;border-bottom:1px solid var(--light-gray);display:flex;justify-content:space-between;align-items:center;">
+                        <div>
+                            <strong style="font-size:1.05rem;">${s.document_title}</strong>
+                            <div style="font-size:0.85rem;color:var(--gray);margin-top:3px;">
+                                Status: <span class="badge-pill" style="color:var(--success);">${s.verification_status}</span> &bull; Verified By: ${s.verified_by}
+                            </div>
+                        </div>
+                        <div>
+                            ${s.source_url ? `<a href="${s.source_url}" target="_blank" class="btn btn-secondary btn-sm">Source &nearr;</a>` : ''}
+                        </div>
+                    </div>
+                `;
+            });
+        });
+}
+
+function loadAdminUsers() {
+    fetch("/api/admin/users")
+        .then(res => res.json())
+        .then(users => {
+            const tbody = document.getElementById("userTableBody");
+            tbody.innerHTML = "";
+            users.forEach(u => {
+                tbody.innerHTML += `
+                    <tr>
+                        <td>${u.id}</td>
+                        <td><strong>${u.full_name || u.username}</strong></td>
+                        <td>${u.email}</td>
+                        <td><span class="badge-pill" style="color:${u.role === 'admin' ? 'var(--accent)' : 'var(--primary)'};">${u.role}</span></td>
+                        <td><span class="badge-pill" style="color:${u.is_active ? 'var(--success)' : 'var(--danger)'};">${u.is_active ? 'Active' : 'Disabled'}</span></td>
+                        <td>
+                            <button class="btn btn-secondary btn-sm" onclick="toggleRole(${u.id})">Toggle Role</button>
+                        </td>
+                    </tr>
+                `;
+            });
+        });
+}
+
+function toggleRole(userId) {
+    fetch(`/api/admin/users/${userId}/toggle-role`, { method: "POST" })
+        .then(() => loadAdminUsers());
+}
+</script>
+{% endblock %}

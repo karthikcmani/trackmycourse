@@ -1,141 +1,437 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Track My Course</title>
+{% extends "base.html" %}
 
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-            margin: 40px;
-        }
-        label {
-            display: block;
-            margin-top: 15px;
-            font-weight: bold;
-        }
-        select {
-            width: 320px;
-            padding: 6px;
-            margin-top: 5px;
-        }
-        h3 {
-            margin-top: 25px;
-        }
-        .topic {
-            margin-left: 15px;
-        }
-        #progressBox {
-            margin-top: 25px;
-        }
-        #progressBarOuter {
-            width: 320px;
-            height: 10px;
-            background: #eee;
-            margin-top: 6px;
-        }
-        #progressBar {
-            height: 10px;
-            width: 0%;
-            background: #4caf50;
-        }
-    </style>
-</head>
-<body>
+{% block title %}Course Progress Tracking — TrackMyCourse{% endblock %}
 
-<h2>Track My Course</h2>
+{% block extra_head %}
+<style>
+    /* ===== COURSE PROGRESS PAGE STYLES (PERSONAL-MODE REFINED) ===== */
+    .progress-hero {
+        margin-bottom: 25px;
+    }
 
-<label>University</label>
-<select id="university">
-    <option value="">Select University</option>
-</select>
+    .page-title {
+        font-size: 1.8rem;
+        font-weight: 800;
+        color: var(--dark);
+        margin-bottom: 6px;
+    }
 
-<label>Program</label>
-<select id="program">
-    <option value="">Select Program</option>
-</select>
+    .page-subtitle {
+        color: var(--gray);
+        font-size: 0.95rem;
+    }
 
-<label>Stream</label>
-<select id="stream">
-    <option value="">Select Stream</option>
-</select>
+    /* Academic Selection Grid */
+    .selection-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 16px;
+        margin-bottom: 25px;
+        background: white;
+        padding: 22px;
+        border-radius: var(--border-radius);
+        box-shadow: var(--shadow);
+        border: 1px solid rgba(0, 0, 0, 0.05);
+    }
 
-<label>Scheme</label>
-<select id="scheme">
-    <option value="">Select Scheme</option>
-</select>
+    .control-group {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+    }
 
-<label>Semester</label>
-<select id="semester">
-    <option value="">Select Semester</option>
-</select>
+    .control-label {
+        font-size: 0.82rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        color: var(--gray);
+    }
 
-<label>Course</label>
-<select id="course">
-    <option value="">Select Course</option>
-</select>
+    .academic-select {
+        width: 100%;
+        padding: 10px 14px;
+        border-radius: 8px;
+        border: 1.5px solid var(--light-gray);
+        background: #fdfdfd;
+        color: var(--dark);
+        font-size: 0.95rem;
+        font-family: inherit;
+        outline: none;
+        transition: var(--transition);
+        cursor: pointer;
+    }
 
-<!-- SYLLABUS -->
-<div id="syllabus"></div>
+    .academic-select:focus {
+        border-color: var(--primary);
+        box-shadow: 0 0 0 3px rgba(67, 97, 238, 0.15);
+        background: white;
+    }
 
-<!-- PROGRESS -->
-<div id="progressBox">
-    <strong>Progress: <span id="progressText">0%</span></strong>
-    <div id="progressBarOuter">
-        <div id="progressBar"></div>
+    /* Course Banner & Status Card */
+    .course-banner {
+        background: linear-gradient(135deg, rgba(67, 97, 238, 0.08) 0%, rgba(76, 201, 240, 0.08) 100%);
+        border: 1px solid rgba(67, 97, 238, 0.15);
+        border-left: 5px solid var(--primary);
+        border-radius: var(--border-radius);
+        padding: 22px 26px;
+        margin-bottom: 30px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        flex-wrap: wrap;
+        gap: 20px;
+    }
+
+    .course-info h3 {
+        font-size: 1.5rem;
+        font-weight: 800;
+        color: var(--dark);
+        margin-bottom: 6px;
+    }
+
+    .course-meta {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        font-size: 0.88rem;
+        color: var(--gray);
+    }
+
+    .badge-pill {
+        display: inline-block;
+        padding: 3px 10px;
+        border-radius: 50px;
+        font-size: 0.78rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        background: white;
+        border: 1px solid rgba(0, 0, 0, 0.1);
+        color: var(--primary-dark);
+    }
+
+    /* Progress Display Box */
+    .progress-stats-box {
+        text-align: right;
+        min-width: 240px;
+    }
+
+    .progress-percentage-label {
+        font-size: 2rem;
+        font-weight: 800;
+        color: var(--primary);
+        line-height: 1;
+        margin-bottom: 6px;
+    }
+
+    .progress-count-text {
+        font-size: 0.85rem;
+        color: var(--gray);
+        margin-bottom: 8px;
+    }
+
+    #progressBarOuter {
+        width: 100%;
+        height: 12px;
+        background: #e9ecef;
+        border-radius: 50px;
+        overflow: hidden;
+        box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.1);
+    }
+
+    #progressBar {
+        height: 100%;
+        width: 0%;
+        background: linear-gradient(90deg, var(--secondary) 0%, var(--primary) 50%, var(--success) 100%);
+        border-radius: 50px;
+        transition: width 0.4s ease;
+    }
+
+    /* Syllabus Modules & Topics */
+    .module-card {
+        background: white;
+        border-radius: var(--border-radius);
+        box-shadow: var(--shadow);
+        border: 1px solid rgba(0, 0, 0, 0.05);
+        margin-bottom: 22px;
+        overflow: hidden;
+    }
+
+    .module-header {
+        padding: 16px 22px;
+        background: #f8fafc;
+        border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+        border-left: 4px solid var(--secondary);
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+    }
+
+    .module-title {
+        font-size: 1.15rem;
+        font-weight: 700;
+        color: var(--dark);
+    }
+
+    .module-hours-badge {
+        background: var(--secondary);
+        color: white;
+        padding: 4px 12px;
+        border-radius: 50px;
+        font-size: 0.8rem;
+        font-weight: 700;
+        box-shadow: 0 2px 6px rgba(76, 201, 240, 0.3);
+    }
+
+    .topics-container {
+        padding: 12px 18px;
+    }
+
+    /* Topic Item Styling */
+    .topic {
+        margin: 6px 0;
+        padding: 12px 16px;
+        border-radius: 8px;
+        display: flex;
+        align-items: center;
+        background: white;
+        border: 1px solid var(--light-gray);
+        transition: var(--transition);
+        position: relative;
+    }
+
+    .topic:hover {
+        border-color: rgba(67, 97, 238, 0.3);
+        background: #fbfdff;
+        transform: translateX(4px);
+    }
+
+    .topicCheck {
+        width: 20px;
+        height: 20px;
+        margin-right: 15px;
+        cursor: pointer;
+        border-radius: 5px;
+        border: 2px solid var(--gray);
+        transition: var(--transition);
+        position: relative;
+        appearance: none;
+        -webkit-appearance: none;
+        flex-shrink: 0;
+        background: white;
+    }
+
+    .topicCheck:hover {
+        border-color: var(--primary);
+        transform: scale(1.1);
+    }
+
+    .topicCheck:checked {
+        background-color: var(--success);
+        border-color: var(--success);
+    }
+
+    .topicCheck:checked::after {
+        content: '✓';
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        color: white;
+        font-weight: bold;
+        font-size: 12px;
+    }
+
+    .topic-name {
+        font-size: 0.95rem;
+        color: #333;
+        flex: 1;
+    }
+
+    .topic-completed .topic-name {
+        color: #888;
+        text-decoration: line-through;
+    }
+
+    /* Empty Syllabus State */
+    .empty-syllabus-state {
+        text-align: center;
+        padding: 50px 20px;
+        color: var(--gray);
+    }
+
+    .empty-syllabus-state span {
+        font-size: 3rem;
+        display: block;
+        margin-bottom: 12px;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="progress-hero">
+    <h1 class="page-title">Course Progress Tracking</h1>
+    <p class="page-subtitle">Select your academic program and track your topic-level syllabus completion in real time.</p>
+</div>
+
+<!-- CASCADING ACADEMIC SELECTION CONTROLS -->
+<div class="selection-grid">
+    <div class="control-group">
+        <label class="control-label" for="university">1. University</label>
+        <select id="university" class="academic-select">
+            <option value="">Select University</option>
+        </select>
+    </div>
+
+    <div class="control-group">
+        <label class="control-label" for="program">2. Program</label>
+        <select id="program" class="academic-select">
+            <option value="">Select Program</option>
+        </select>
+    </div>
+
+    <div class="control-group" id="streamGroup" style="display: none;">
+        <label class="control-label" for="stream">3. Stream</label>
+        <select id="stream" class="academic-select">
+            <option value="">Select Stream</option>
+        </select>
+    </div>
+
+    <div class="control-group">
+        <label class="control-label" for="scheme">4. Scheme</label>
+        <select id="scheme" class="academic-select">
+            <option value="">Select Scheme</option>
+        </select>
+    </div>
+
+    <div class="control-group">
+        <label class="control-label" for="semester">5. Semester</label>
+        <select id="semester" class="academic-select">
+            <option value="">Select Semester</option>
+        </select>
+    </div>
+
+    <div class="control-group">
+        <label class="control-label" for="course">6. Course</label>
+        <select id="course" class="academic-select">
+            <option value="">Select Course</option>
+        </select>
     </div>
 </div>
 
+<!-- COURSE BANNER & PROGRESS OVERVIEW -->
+<div class="course-banner" id="courseBanner" style="display: none;">
+    <div class="course-info">
+        <h3 id="currentCourseTitle">Course Syllabus</h3>
+        <div class="course-meta">
+            <span class="badge-pill" id="currentCourseCode">CRS</span>
+            <span class="badge-pill" id="currentCourseCredits">4 Credits</span>
+            <span id="currentCourseType">Theory Course</span>
+        </div>
+    </div>
+
+    <div class="progress-stats-box" id="progressBox">
+        <div class="progress-percentage-label" id="progressText">0%</div>
+        <div class="progress-count-text" id="progressCount">0 of 0 Topics Completed</div>
+        <div id="progressBarOuter">
+            <div id="progressBar"></div>
+        </div>
+    </div>
+</div>
+
+<!-- SYLLABUS MODULES & TOPICS CONTAINER -->
+<div id="syllabus">
+    <div class="empty-syllabus-state" id="initialPrompt">
+        <span>📖</span>
+        <h3>Select a Course to View Syllabus</h3>
+        <p>Use the dropdowns above to explore your university curriculum and record your academic progress.</p>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
 <script>
 document.addEventListener("DOMContentLoaded", () => {
-
     const uni = document.getElementById("university");
     const prog = document.getElementById("program");
     const stream = document.getElementById("stream");
+    const streamGroup = document.getElementById("streamGroup");
     const scheme = document.getElementById("scheme");
     const sem = document.getElementById("semester");
     const course = document.getElementById("course");
     const syllabusDiv = document.getElementById("syllabus");
+    const courseBanner = document.getElementById("courseBanner");
+    const initialPrompt = document.getElementById("initialPrompt");
 
-    // ---------- LOAD UNIVERSITIES ----------
+    // Track total topics for accurate percentage
+    let currentTotalTopics = 0;
+
+    // 1. Load Universities
     fetch("/api/universities")
         .then(res => res.json())
         .then(data => {
             data.forEach(u => {
-                uni.innerHTML += `<option value="${u.id}">${u.name}</option>`;
+                uni.innerHTML += `<option value="${u.id}">${u.name}${u.code ? ' (' + u.code + ')' : ''}</option>`;
             });
-        });
+
+            // Check URL parameters or auto-select KTU
+            const urlParams = new URLSearchParams(window.location.search);
+            const preSelectCourse = urlParams.get("course_id");
+
+            if (data.length > 0) {
+                uni.value = data[0].id;
+                loadPrograms(uni.value, preSelectCourse);
+            }
+        })
+        .catch(err => console.error("Error loading universities:", err));
 
     uni.onchange = () => {
         resetBelow("program");
-        fetch(`/api/programs?university_id=${uni.value}`)
+        loadPrograms(uni.value);
+    };
+
+    function loadPrograms(universityId, preSelectCourse = null) {
+        if (!universityId) return;
+        fetch(`/api/programs?university_id=${universityId}`)
             .then(res => res.json())
             .then(data => {
+                prog.innerHTML = '<option value="">Select Program</option>';
                 data.forEach(p => {
                     prog.innerHTML += `<option value="${p.id}">${p.name}</option>`;
                 });
+                if (data.length > 0) {
+                    prog.value = data[0].id; // Default to MCA if available
+                    loadStreamsOrSchemes(prog.value, preSelectCourse);
+                }
             });
-    };
+    }
 
     prog.onchange = () => {
         resetBelow("stream");
-        fetch(`/api/streams?program_id=${prog.value}`)
+        loadStreamsOrSchemes(prog.value);
+    };
+
+    function loadStreamsOrSchemes(programId, preSelectCourse = null) {
+        if (!programId) return;
+        fetch(`/api/streams?program_id=${programId}`)
             .then(res => res.json())
             .then(data => {
                 if (data.length === 0) {
-                    loadSchemes();
+                    streamGroup.style.display = "none";
+                    loadSchemes("", preSelectCourse);
                 } else {
+                    streamGroup.style.display = "block";
+                    stream.innerHTML = '<option value="">Select Stream</option>';
                     data.forEach(s => {
                         stream.innerHTML += `<option value="${s.id}">${s.name}</option>`;
                     });
                 }
             });
-    };
+    }
 
     stream.onchange = () => loadSchemes(stream.value);
 
-    function loadSchemes(streamId="") {
+    function loadSchemes(streamId = "", preSelectCourse = null) {
         resetBelow("scheme");
         let url = `/api/schemes?program_id=${prog.value}`;
         if (streamId) url += `&stream_id=${streamId}`;
@@ -143,109 +439,225 @@ document.addEventListener("DOMContentLoaded", () => {
         fetch(url)
             .then(res => res.json())
             .then(data => {
+                scheme.innerHTML = '<option value="">Select Scheme</option>';
                 data.forEach(sc => {
-                    scheme.innerHTML += `<option value="${sc.id}">${sc.year}</option>`;
+                    scheme.innerHTML += `<option value="${sc.id}">Scheme ${sc.year}</option>`;
                 });
+                if (data.length > 0) {
+                    scheme.value = data[0].id;
+                    loadSemesters(scheme.value, preSelectCourse);
+                }
             });
     }
 
     scheme.onchange = () => {
         resetBelow("semester");
-        fetch(`/api/semesters?scheme_id=${scheme.value}`)
+        loadSemesters(scheme.value);
+    };
+
+    function loadSemesters(schemeId, preSelectCourse = null) {
+        if (!schemeId) return;
+        fetch(`/api/semesters?scheme_id=${schemeId}`)
             .then(res => res.json())
             .then(data => {
+                sem.innerHTML = '<option value="">Select Semester</option>';
                 data.forEach(s => {
                     sem.innerHTML += `<option value="${s.id}">Semester ${s.semester_no}</option>`;
                 });
+                if (data.length > 0) {
+                    sem.value = data[0].id;
+                    loadCourses(sem.value, preSelectCourse);
+                }
             });
-    };
+    }
 
     sem.onchange = () => {
         resetBelow("course");
-        fetch(`/api/courses?semester_id=${sem.value}`)
-            .then(res => res.json())
-            .then(data => {
-                data.forEach(c => {
-                    course.innerHTML += `<option value="${c.id}">${c.name}</option>`;
-                });
-            });
+        loadCourses(sem.value);
     };
 
-    // ---------- COURSE → SYLLABUS + PROGRESS ----------
-    course.onchange = () => {
-        syllabusDiv.innerHTML = "";
-
-        fetch(`/api/syllabus?course_id=${course.value}`)
+    function loadCourses(semesterId, preSelectCourse = null) {
+        if (!semesterId) return;
+        fetch(`/api/courses?semester_id=${semesterId}`)
             .then(res => res.json())
             .then(data => {
+                course.innerHTML = '<option value="">Select Course</option>';
+                data.forEach(c => {
+                    course.innerHTML += `<option value="${c.id}" data-name="${c.name}" data-code="${c.code}" data-credits="${c.credits}">${c.name}${c.code ? ' (' + c.code + ')' : ''}</option>`;
+                });
 
-                let total = 0;
+                if (preSelectCourse) {
+                    course.value = preSelectCourse;
+                    renderCourseSyllabus(course.value);
+                } else if (data.length > 0) {
+                    // Look for Advanced Software Engineering or first course
+                    const aseOption = Array.from(course.options).find(opt => opt.text.includes("Advanced Software Engineering"));
+                    if (aseOption) {
+                        course.value = aseOption.value;
+                    } else {
+                        course.value = data[0].id;
+                    }
+                    renderCourseSyllabus(course.value);
+                }
+            });
+    }
 
-                data.forEach(m => {
-                    syllabusDiv.innerHTML += `<h3>${m.module} (${m.hours} hrs)</h3>`;
+    // 2. Course Selection & Syllabus Rendering
+    course.onchange = () => {
+        if (course.value) {
+            renderCourseSyllabus(course.value);
+        } else {
+            resetBelow("course");
+        }
+    };
+
+    function renderCourseSyllabus(courseId) {
+        const selectedOpt = course.options[course.selectedIndex];
+        const courseName = selectedOpt ? selectedOpt.getAttribute("data-name") || selectedOpt.text : "Course Syllabus";
+        const courseCode = selectedOpt ? selectedOpt.getAttribute("data-code") || "CORE" : "CORE";
+        const credits = selectedOpt ? selectedOpt.getAttribute("data-credits") || "4" : "4";
+
+        document.getElementById("currentCourseTitle").innerText = courseName;
+        document.getElementById("currentCourseCode").innerText = courseCode;
+        document.getElementById("currentCourseCredits").innerText = `${credits} Credits`;
+        courseBanner.style.display = "flex";
+
+        syllabusDiv.innerHTML = '<div style="text-align:center;padding:40px;"><p>Loading syllabus...</p></div>';
+
+        fetch(`/api/syllabus?course_id=${courseId}`)
+            .then(res => res.json())
+            .then(modules => {
+                if (!modules || modules.length === 0) {
+                    syllabusDiv.innerHTML = `
+                        <div class="empty-syllabus-state">
+                            <span>📄</span>
+                            <h3>No Syllabus Topics Added Yet</h3>
+                            <p>This course currently has no registered syllabus topics in the academic catalog.</p>
+                        </div>
+                    `;
+                    currentTotalTopics = 0;
+                    updateProgressUI(0, 0);
+                    return;
+                }
+
+                syllabusDiv.innerHTML = "";
+                currentTotalTopics = 0;
+
+                modules.forEach(m => {
+                    let moduleHtml = `
+                        <div class="module-card">
+                            <div class="module-header">
+                                <span class="module-title">${m.module}</span>
+                                ${m.hours ? `<span class="module-hours-badge">${m.hours} Hours</span>` : ''}
+                            </div>
+                            <div class="topics-container">
+                    `;
+
                     m.topics.forEach(t => {
-                        total++;
-                        syllabusDiv.innerHTML += `
-                            <div class="topic">
+                        currentTotalTopics++;
+                        moduleHtml += `
+                            <div class="topic" id="topic-container-${t.id}">
                                 <input type="checkbox"
                                        class="topicCheck"
+                                       id="topic-cb-${t.id}"
                                        data-topic-id="${t.id}">
-                                ${t.name}
+                                <label class="topic-name" for="topic-cb-${t.id}">${t.name}</label>
                             </div>
                         `;
                     });
+
+                    moduleHtml += `
+                            </div>
+                        </div>
+                    `;
+                    syllabusDiv.innerHTML += moduleHtml;
                 });
 
-                // LOAD SAVED PROGRESS
-                fetch(`/api/progress/${course.value}`)
+                // 3. Load Saved Completion States
+                fetch(`/api/progress/${courseId}`)
                     .then(res => res.json())
-                    .then(saved => {
-                        saved.forEach(p => {
-                            const cb = document.querySelector(
-                                `[data-topic-id="${p.topic_id}"]`
-                            );
-                            if (cb) cb.checked = p.completed;
+                    .then(savedRecords => {
+                        let doneCount = 0;
+                        savedRecords.forEach(p => {
+                            const cb = document.querySelector(`[data-topic-id="${p.topic_id}"]`);
+                            if (cb) {
+                                cb.checked = p.completed;
+                                const container = document.getElementById(`topic-container-${p.topic_id}`);
+                                if (container) {
+                                    if (p.completed) container.classList.add("topic-completed");
+                                    else container.classList.remove("topic-completed");
+                                }
+                                if (p.completed) doneCount++;
+                            }
                         });
-                        updateProgress();
+                        updateProgressUI(doneCount, currentTotalTopics);
+                    })
+                    .catch(err => {
+                        console.error("Error loading progress:", err);
+                        updateProgressUI(0, currentTotalTopics);
                     });
 
-                // SAVE ON CHANGE
+                // 4. Attach Checkbox Change Handlers
                 document.querySelectorAll(".topicCheck").forEach(cb => {
                     cb.onchange = () => {
+                        const isDone = cb.checked;
+                        const topicId = cb.dataset.topicId;
+                        const container = document.getElementById(`topic-container-${topicId}`);
+                        if (container) {
+                            if (isDone) container.classList.add("topic-completed");
+                            else container.classList.remove("topic-completed");
+                        }
+
+                        // Save immediately to backend
                         fetch("/api/progress", {
                             method: "POST",
-                            headers: {"Content-Type": "application/json"},
+                            headers: { "Content-Type": "application/json" },
                             body: JSON.stringify({
-                                topic_id: cb.dataset.topicId,
-                                completed: cb.checked
+                                topic_id: topicId,
+                                completed: isDone
                             })
-                        });
-                        updateProgress();
+                        }).catch(err => console.error("Error saving progress:", err));
+
+                        // Recalculate local progress
+                        const checkedCount = document.querySelectorAll(".topicCheck:checked").length;
+                        updateProgressUI(checkedCount, currentTotalTopics);
                     };
                 });
-
-                function updateProgress() {
-                    const done = document.querySelectorAll(".topicCheck:checked").length;
-                    const percent = Math.round((done / total) * 100);
-                    document.getElementById("progressText").innerText = percent + "%";
-                    document.getElementById("progressBar").style.width = percent + "%";
-                }
+            })
+            .catch(err => {
+                syllabusDiv.innerHTML = `<div class="alert alert-danger">Failed to load syllabus: ${err.message}</div>`;
             });
-    };
+    }
+
+    function updateProgressUI(done, total) {
+        // Safe division preventing NaN%
+        const percent = total > 0 ? Math.round((done / total) * 100) : 0;
+        document.getElementById("progressText").innerText = `${percent}%`;
+        document.getElementById("progressCount").innerText = `${done} of ${total} Topics Completed`;
+        document.getElementById("progressBar").style.width = `${percent}%`;
+    }
 
     function resetBelow(level) {
         if (level === "program") prog.innerHTML = '<option value="">Select Program</option>';
-        if (["program","stream"].includes(level)) stream.innerHTML = '<option value="">Select Stream</option>';
-        if (["program","stream","scheme"].includes(level)) scheme.innerHTML = '<option value="">Select Scheme</option>';
-        if (["program","stream","scheme","semester"].includes(level)) sem.innerHTML = '<option value="">Select Semester</option>';
-        if (["program","stream","scheme","semester","course"].includes(level)) course.innerHTML = '<option value="">Select Course</option>';
-        syllabusDiv.innerHTML = "";
-        document.getElementById("progressText").innerText = "0%";
-        document.getElementById("progressBar").style.width = "0%";
+        if (["program", "stream"].includes(level)) {
+            stream.innerHTML = '<option value="">Select Stream</option>';
+            streamGroup.style.display = "none";
+        }
+        if (["program", "stream", "scheme"].includes(level)) scheme.innerHTML = '<option value="">Select Scheme</option>';
+        if (["program", "stream", "scheme", "semester"].includes(level)) sem.innerHTML = '<option value="">Select Semester</option>';
+        if (["program", "stream", "scheme", "semester", "course"].includes(level)) {
+            course.innerHTML = '<option value="">Select Course</option>';
+            courseBanner.style.display = "none";
+            syllabusDiv.innerHTML = `
+                <div class="empty-syllabus-state">
+                    <span>📖</span>
+                    <h3>Select a Course to View Syllabus</h3>
+                    <p>Use the dropdowns above to explore your university curriculum and record your academic progress.</p>
+                </div>
+            `;
+            updateProgressUI(0, 0);
+        }
     }
-
 });
 </script>
-
-</body>
-</html>
+{% endblock %}

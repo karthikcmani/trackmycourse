@@ -1,0 +1,96 @@
+{% extends "base.html" %}
+
+{% block title %}Academic Catalog & Provenance — TrackMyCourse{% endblock %}
+
+{% block extra_head %}
+<style>
+    .source-card {
+        background: white;
+        border-radius: var(--border-radius);
+        box-shadow: var(--shadow);
+        border: 1px solid rgba(0, 0, 0, 0.05);
+        padding: 22px;
+        margin-bottom: 16px;
+        transition: var(--transition);
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 15px;
+    }
+
+    .source-card:hover {
+        border-color: rgba(67, 97, 238, 0.3);
+        transform: translateY(-2px);
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div style="margin-bottom: 25px;">
+    <h1 class="page-title">Verified Academic Catalog & Provenance</h1>
+    <p class="page-subtitle">TrackMyCourse maintains verifiable primary sources for every curriculum document in the catalog.</p>
+</div>
+
+<div class="card">
+    <div class="card-header">
+        <h2 class="card-title">🏛️ Active Universities & Programs</h2>
+    </div>
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 15px;">
+        <div style="padding: 16px; background: #f8fafc; border-radius: 10px; border-left: 4px solid var(--primary);">
+            <strong style="font-size: 1.1rem; color: var(--dark);">APJ Abdul Kalam Technological University</strong>
+            <div style="font-size: 0.85rem; color: var(--gray); margin-top: 4px;">State Technological University &bull; Kerala, India</div>
+            <div style="margin-top: 10px; font-size: 0.85rem;">Programs: <strong>MCA (Scheme 2021)</strong>, <strong>B.Tech CSE (Scheme 2019/2024)</strong></div>
+        </div>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-header">
+        <h2 class="card-title">📜 Curriculum Provenance & Verification Records</h2>
+        <span class="badge-pill" style="color: var(--success); border-color: var(--success);">100% Primary Sources</span>
+    </div>
+
+    <div id="sourcesContainer">
+        <p style="color: var(--gray); padding: 15px;">Loading provenance sources...</p>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+document.addEventListener("DOMContentLoaded", () => {
+    fetch("/api/admin/sources")
+        .then(res => res.json())
+        .then(sources => {
+            const container = document.getElementById("sourcesContainer");
+            if (!sources || sources.length === 0) {
+                container.innerHTML = "<p style='color:var(--gray);padding:15px;'>No provenance records found.</p>";
+                return;
+            }
+
+            container.innerHTML = "";
+            sources.forEach(s => {
+                container.innerHTML += `
+                    <div class="source-card">
+                        <div style="flex: 1; min-width: 280px;">
+                            <div style="display:flex;align-items:center;gap:10px;margin-bottom:6px;">
+                                <span class="badge-pill" style="color:var(--success);background:#e8f5e9;border:none;">✓ ${s.verification_status.toUpperCase()}</span>
+                                <span style="font-size:0.8rem;color:var(--gray);">v${s.version}</span>
+                            </div>
+                            <strong style="font-size:1.05rem;color:var(--dark);">${s.document_title}</strong>
+                            <div style="font-size:0.85rem;color:var(--gray);margin-top:4px;">
+                                Verified By: <strong>${s.verified_by}</strong> &bull; Retrieved: ${s.retrieval_date}
+                            </div>
+                            ${s.notes ? `<div style="font-size:0.82rem;color:#555;margin-top:6px;font-style:italic;">"${s.notes}"</div>` : ''}
+                        </div>
+                        <div>
+                            ${s.source_url ? `<a href="${s.source_url}" target="_blank" rel="noopener noreferrer" class="btn btn-secondary btn-sm">Official Source &nearr;</a>` : ''}
+                        </div>
+                    </div>
+                `;
+            });
+        });
+});
+</script>
+{% endblock %}

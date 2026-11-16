@@ -1,0 +1,124 @@
+{% extends "base.html" %}
+
+{% block title %}Sign In — TrackMyCourse{% endblock %}
+
+{% block extra_head %}
+<style>
+    .auth-container {
+        max-width: 440px;
+        margin: 40px auto;
+        background: white;
+        padding: 35px 30px;
+        border-radius: var(--border-radius);
+        box-shadow: var(--shadow-lg);
+        border: 1px solid rgba(0, 0, 0, 0.06);
+    }
+
+    .auth-title {
+        font-size: 1.6rem;
+        font-weight: 800;
+        color: var(--dark);
+        margin-bottom: 8px;
+        text-align: center;
+    }
+
+    .auth-subtitle {
+        color: var(--gray);
+        font-size: 0.9rem;
+        text-align: center;
+        margin-bottom: 25px;
+    }
+
+    .form-group {
+        margin-bottom: 20px;
+    }
+
+    .form-label {
+        display: block;
+        font-size: 0.85rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        color: var(--gray);
+        margin-bottom: 6px;
+    }
+
+    .form-input {
+        width: 100%;
+        padding: 12px 14px;
+        border-radius: 8px;
+        border: 1.5px solid var(--light-gray);
+        font-size: 0.95rem;
+        font-family: inherit;
+        outline: none;
+        transition: var(--transition);
+    }
+
+    .form-input:focus {
+        border-color: var(--primary);
+        box-shadow: 0 0 0 3px rgba(67, 97, 238, 0.15);
+    }
+
+    .auth-footer {
+        text-align: center;
+        margin-top: 20px;
+        font-size: 0.9rem;
+        color: var(--gray);
+    }
+
+    .auth-footer a {
+        color: var(--primary);
+        font-weight: 600;
+        text-decoration: none;
+    }
+
+    .auth-footer a:hover {
+        text-decoration: underline;
+    }
+
+    .demo-credentials-box {
+        background: #f8fafc;
+        border: 1px dashed rgba(67, 97, 238, 0.3);
+        border-radius: 8px;
+        padding: 12px 14px;
+        margin-bottom: 20px;
+        font-size: 0.85rem;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="auth-container">
+    <h2 class="auth-title">Welcome Back</h2>
+    <p class="auth-subtitle">Sign in to your private academic workspace</p>
+
+    <div class="demo-credentials-box">
+        <strong style="color:var(--primary-dark);">Default Accounts:</strong><br>
+        • Student: <code>student@trackmycourse.edu</code> / <code>student123</code><br>
+        • Admin: <code>admin@trackmycourse.edu</code> / <code>admin123</code>
+    </div>
+
+    <form method="POST" action="{{ url_for('auth.login') }}">
+        <div class="form-group">
+            <label class="form-label" for="email">Email Address</label>
+            <input type="email" id="email" name="email" class="form-input" required autofocus value="{{ email or '' }}" placeholder="student@university.edu">
+        </div>
+
+        <div class="form-group">
+            <label class="form-label" for="password">Password</label>
+            <input type="password" id="password" name="password" class="form-input" required placeholder="••••••••">
+        </div>
+
+        <div class="form-group" style="display:flex;align-items:center;gap:8px;">
+            <input type="checkbox" id="remember" name="remember" style="cursor:pointer;">
+            <label for="remember" style="font-size:0.9rem;cursor:pointer;color:#555;">Remember me on this browser</label>
+        </div>
+
+        <button type="submit" class="btn btn-primary" style="width:100%;justify-content:center;padding:12px;">Sign In &rarr;</button>
+    </form>
+
+    <div class="auth-footer">
+        Don't have an account? <a href="{{ url_for('auth.register') }}">Create an account</a>
+    </div>
+</div>
+{% endblock %}

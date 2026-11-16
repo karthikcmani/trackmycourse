@@ -1,0 +1,192 @@
+{% extends "base.html" %}
+
+{% block title %}Academic Insights & Analytics — TrackMyCourse{% endblock %}
+
+{% block extra_head %}
+<style>
+    .analytics-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+        gap: 25px;
+        margin-bottom: 30px;
+    }
+
+    .stat-hero {
+        background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+        color: white;
+        padding: 30px;
+        border-radius: var(--border-radius);
+        box-shadow: var(--shadow-lg);
+    }
+
+    .weekly-bar-container {
+        display: flex;
+        align-items: flex-end;
+        justify-content: space-between;
+        height: 180px;
+        padding-top: 20px;
+        gap: 12px;
+    }
+
+    .bar-col {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 8px;
+        height: 100%;
+        justify-content: flex-end;
+    }
+
+    .bar-fill {
+        width: 100%;
+        max-width: 38px;
+        background: linear-gradient(180deg, var(--secondary) 0%, var(--primary) 100%);
+        border-radius: 6px 6px 0 0;
+        min-height: 4px;
+        transition: height 0.5s ease;
+    }
+
+    .bar-label {
+        font-size: 0.75rem;
+        color: var(--gray);
+        font-weight: 600;
+        text-align: center;
+    }
+
+    .data-table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 0.95rem;
+    }
+
+    .data-table th, .data-table td {
+        padding: 12px 16px;
+        text-align: left;
+        border-bottom: 1px solid var(--light-gray);
+    }
+
+    .data-table th {
+        background: #f8fafc;
+        color: var(--gray);
+        font-weight: 700;
+        text-transform: uppercase;
+        font-size: 0.78rem;
+        letter-spacing: 0.5px;
+    }
+
+    .data-table tr:hover {
+        background: #fbfdff;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div style="margin-bottom: 25px;">
+    <h1 class="page-title">Academic Insights & Analytics</h1>
+    <p class="page-subtitle">Genuine metrics computed directly from your syllabus completion and study activity history.</p>
+</div>
+
+<div class="analytics-grid">
+    <div class="stat-hero">
+        <div style="font-size: 0.9rem; font-weight: 600; text-transform: uppercase; opacity: 0.85;">Overall Syllabus Completion</div>
+        <div style="font-size: 3rem; font-weight: 800; line-height: 1.1; margin: 10px 0;" id="heroPercent">0%</div>
+        <p style="font-size: 0.9rem; opacity: 0.9;" id="heroSubtext">Loading academic curriculum metrics...</p>
+    </div>
+
+    <!-- Weekly Study Consistency -->
+    <div class="card" style="margin-bottom: 0;">
+        <div class="card-header" style="margin-bottom: 0; padding-bottom: 10px;">
+            <h3 class="card-title">📅 7-Day Study Activity (Minutes)</h3>
+        </div>
+        <div class="weekly-bar-container" id="weeklyBars">
+            <p style="color: var(--gray); margin: auto;">Loading study activity...</p>
+        </div>
+    </div>
+</div>
+
+<!-- COURSE COMPLETION BREAKDOWN TABLE -->
+<div class="card">
+    <div class="card-header">
+        <h2 class="card-title">📊 Course-Wise Syllabus Analytics</h2>
+    </div>
+
+    <div style="overflow-x: auto;">
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>Course Code</th>
+                    <th>Course Title</th>
+                    <th>Credits</th>
+                    <th>Topics Completed</th>
+                    <th>Progress</th>
+                    <th>Status</th>
+                </tr>
+            </thead>
+            <tbody id="courseTableBody">
+                <tr>
+                    <td colspan="6" style="text-align: center; color: var(--gray); padding: 25px;">Loading course progress breakdown...</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+document.addEventListener("DOMContentLoaded", () => {
+    fetch("/api/analytics/dashboard")
+        .then(res => res.json())
+        .then(data => {
+            document.getElementById("heroPercent").innerText = `${data.overall_percentage}%`;
+            document.getElementById("heroSubtext").innerText = `${data.completed_topics} of ${data.total_topics} topics completed across ${data.courses.length} courses.`;
+
+            // Weekly Bars
+            const barsContainer = document.getElementById("weeklyBars");
+            barsContainer.innerHTML = "";
+            const maxMins = Math.max(...data.weekly_activity.map(d => d.minutes), 60);
+
+            data.weekly_activity.forEach(day => {
+                const heightPct = Math.round((day.minutes / maxMins) * 100);
+                barsContainer.innerHTML += `
+                    <div class="bar-col">
+                        <span style="font-size:0.75rem;font-weight:700;color:var(--primary);">${day.minutes > 0 ? day.minutes + 'm' : ''}</span>
+                        <div class="bar-fill" style="height: ${Math.max(heightPct, 4)}%;"></div>
+                        <span class="bar-label">${day.date}</span>
+                    </div>
+                `;
+            });
+
+            // Courses Table
+            const tbody = document.getElementById("courseTableBody");
+            tbody.innerHTML = "";
+            data.courses.forEach(c => {
+                const statusBadge = c.percentage >= 100
+                    ? '<span class="badge-pill" style="color:var(--success);border-color:var(--success);">Completed</span>'
+                    : (c.percentage > 0
+                        ? '<span class="badge-pill" style="color:var(--primary);border-color:var(--primary);">In Progress</span>'
+                        : '<span class="badge-pill" style="color:var(--gray);">Not Started</span>');
+
+                tbody.innerHTML += `
+                    <tr>
+                        <td><strong>${c.code}</strong></td>
+                        <td>${c.name}</td>
+                        <td>${c.credits}</td>
+                        <td>${c.completed_topics} / ${c.total_topics} (${c.remaining_topics} left)</td>
+                        <td style="min-width: 140px;">
+                            <div style="display:flex;align-items:center;gap:10px;">
+                                <div style="flex:1;height:8px;background:var(--light-gray);border-radius:10px;overflow:hidden;">
+                                    <div style="width:${c.percentage}%;height:100%;background:var(--primary);border-radius:10px;"></div>
+                                </div>
+                                <strong style="font-size:0.85rem;color:var(--primary);">${c.percentage}%</strong>
+                            </div>
+                        </td>
+                        <td>${statusBadge}</td>
+                    </tr>
+                `;
+            });
+        });
+});
+</script>
+{% endblock %}
