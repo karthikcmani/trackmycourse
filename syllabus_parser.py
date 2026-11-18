@@ -171,58 +171,98 @@ class SyllabusParser:
         }
 
     @classmethod
+    def parse_text_content(cls, text, metadata=None):
+        """Directly parses raw text (e.g. pasted by student) into structured semester-wise academic format."""
+        metadata = metadata or {}
+        return cls._structure_academic_text(text, metadata)
+
+    @classmethod
     def _structure_academic_text(cls, text, metadata):
         """
-        Regex and rule-based parser that identifies Courses, Modules/Units,
-        Hours, and Topics from text.
+        Regex and rule-based parser that identifies Semesters, Courses, Modules/Units,
+        Hours, and Topics from text and arranges them semester-wise.
         """
         lines = [line.strip() for line in text.splitlines() if line.strip()]
-        
+
+        default_sem = int(metadata.get("semester_no", 1))
+        current_sem_no = default_sem
+
+        # Dictionary to group courses semester-wise: { sem_no: [courses] }
+        semesters_dict = {}
+
         current_course = None
         current_module = None
-        courses = []
-        
-        default_sem = int(metadata.get("semester_no", 1))
 
-        # Patterns
-        course_pattern = re.compile(r"^(?:COURSE|SUBJECT|PAPER)?\s*([A-Z0-9]{5,10})?\s*[-:–]?\s*([A-Z][A-Za-z0-9\s&,/-]{4,80})$")
+        # Regex patterns
+        roman_map = {"I": 1, "II": 2, "III": 3, "IV": 4, "V": 5, "VI": 6, "VII": 7, "VIII": 8}
+        sem_pattern = re.compile(r"^(?:SEMESTER|SEM|TERM)\s*([0-9]+|[IVXLCDM]+)[\s:–-]*(.*)$", re.IGNORECASE)
+        course_pattern = re.compile(r"^(?:COURSE|SUBJECT|PAPER)?\s*([A-Z0-9]{4,12})?\s*[-:–]?\s*([A-Z][A-Za-z0-9\s&,/-]{4,85})$")
         module_pattern = re.compile(r"^(?:MODULE|UNIT)\s*([0-9IVXLCDM]+)[\s:–-]*(.*)$", re.IGNORECASE)
         hours_pattern = re.compile(r"(\d+)\s*(?:HOURS|HRS)", re.IGNORECASE)
 
         for line in lines:
+            # Check for Semester heading
+            sem_match = sem_pattern.match(line)
+            if sem_match:
+                raw_sem = sem_match.group(1).upper()
+                if raw_sem.isdigit():
+                    current_sem_no = int(raw_sem)
+                elif raw_sem in roman_map:
+                    current_sem_no = roman_map[raw_sem]
+                else:
+                    current_sem_no = default_sem
+
+                if current_sem_no not in semesters_dict:
+                    semesters_dict[current_sem_no] = []
+                current_course = None
+                current_module = None
+                continue
+
+            # Ensure current semester list exists
+            if current_sem_no not in semesters_dict:
+                semesters_dict[current_sem_no] = []
+
             # Check for Module or Unit heading
             mod_match = module_pattern.match(line)
             if mod_match:
-                mod_num = mod_match.group(1)
+                mod_num_raw = mod_match.group(1).upper()
+                mod_num = roman_map.get(mod_num_raw, int(mod_num_raw) if mod_num_raw.isdigit() else 1)
                 mod_title = mod_match.group(2).strip()
                 hours_match = hours_pattern.search(line)
                 hours = int(hours_match.group(1)) if hours_match else 8
 
                 if not current_course:
                     current_course = {
-                        "name": metadata.get("course_name", "Curriculum Course"),
-                        "code": metadata.get("course_code", ""),
+                        "name": metadata.get("course_name", f"Course in Semester {current_sem_no}"),
+                        "code": metadata.get("course_code", f"CRS{current_sem_no}01"),
                         "credits": 4,
                         "course_type": "Theory",
                         "modules": []
                     }
-                    courses.append(current_course)
+                    semesters_dict[current_sem_no].append(current_course)
 
                 current_module = {
                     "name": f"Module {mod_num}" + (f": {mod_title}" if mod_title else ""),
-                    "module_no": int(mod_num) if mod_num.isdigit() else len(current_course["modules"]) + 1,
+                    "module_no": mod_num if isinstance(mod_num, int) else len(current_course["modules"]) + 1,
                     "hours": hours,
                     "topics": []
                 }
                 current_course["modules"].append(current_module)
                 continue
 
-            # Check for course heading if in all-caps or preceded by course code
+            # Check for Course heading
             c_match = course_pattern.match(line)
-            if c_match and len(line) < 90 and not mod_match and not line.startswith("-"):
+            if c_match and len(line) < 90 and not mod_match and not line.startswith("-") and not line.startswith("*"):
                 code = c_match.group(1) or ""
                 name = c_match.group(2).strip()
-                if any(w in name.upper() for w in ["DATA", "NETWORKS", "PROGRAMMING", "ENGINEERING", "MATHEMATICS", "SYSTEM", "INTELLIGENCE", "MANAGEMENT", "ALGORITHMS"]):
+                # Keyword heuristic to distinguish course title from regular prose
+                academic_keywords = [
+                    "DATA", "NETWORKS", "PROGRAMMING", "ENGINEERING", "MATHEMATICS",
+                    "SYSTEM", "INTELLIGENCE", "MANAGEMENT", "ALGORITHMS", "DATABASE",
+                    "SOFTWARE", "ARCHITECTURE", "PHYSICS", "CHEMISTRY", "COMPUTING",
+                    "MACHINE", "LEARNING", "OPERATING", "DESIGN", "DISCRETE", "CALCULUS"
+                ]
+                if any(w in name.upper() for w in academic_keywords) or (code and len(code) >= 5):
                     current_course = {
                         "name": name,
                         "code": code,
@@ -230,53 +270,57 @@ class SyllabusParser:
                         "course_type": "Theory",
                         "modules": []
                     }
-                    courses.append(current_course)
+                    semesters_dict[current_sem_no].append(current_course)
                     current_module = None
                     continue
 
-            # Otherwise, treat as topic under current module
+            # Otherwise, line is a Topic under current module
             if current_module:
-                # Clean bullet points, numbering, etc.
                 cleaned = re.sub(r"^[\d\.\-\*•]+\s*", "", line).strip()
                 if len(cleaned) > 3 and not hours_pattern.search(cleaned):
-                    # Check if comma-separated subtopics
                     if len(cleaned.split(",")) > 3 and len(cleaned) > 60:
                         parts = [p.strip() for p in cleaned.split(",") if len(p.strip()) > 3]
                         current_module["topics"].extend(parts)
                     else:
                         current_module["topics"].append(cleaned)
 
-        # Fallback if no modules detected
-        if not courses:
-            courses.append({
-                "name": metadata.get("course_name", "Curriculum Document"),
-                "code": metadata.get("course_code", ""),
-                "credits": 4,
-                "course_type": "Theory",
-                "modules": [
-                    {
-                        "name": "General Syllabus Module",
-                        "module_no": 1,
-                        "hours": 10,
-                        "topics": [l for l in lines if len(l) > 10][:20]
-                    }
-                ]
-            })
+        # Fallback if text lacked formal module structure
+        if not semesters_dict or all(len(c_list) == 0 for c_list in semesters_dict.values()):
+            semesters_dict[default_sem] = [
+                {
+                    "name": metadata.get("course_name", "Student Contributed Curriculum"),
+                    "code": metadata.get("course_code", f"CRS{default_sem}01"),
+                    "credits": 4,
+                    "course_type": "Theory",
+                    "modules": [
+                        {
+                            "name": "General Syllabus Module",
+                            "module_no": 1,
+                            "hours": 10,
+                            "topics": [l for l in lines if len(l) > 6 and not sem_pattern.match(l)][:25]
+                        }
+                    ]
+                }
+            ]
+
+        # Convert semesters_dict to ordered list of semester objects
+        ordered_semesters = []
+        for sem_no in sorted(semesters_dict.keys()):
+            if semesters_dict[sem_no]:
+                ordered_semesters.append({
+                    "semester_no": sem_no,
+                    "courses": semesters_dict[sem_no]
+                })
 
         return {
             "university": metadata.get("university_name", "APJ Abdul Kalam Technological University"),
             "program": metadata.get("program_name", "MCA"),
             "scheme": metadata.get("scheme_year", "2020"),
-            "semesters": [
-                {
-                    "semester_no": default_sem,
-                    "courses": courses
-                }
-            ],
+            "semesters": ordered_semesters,
             "provenance": {
-                "source_doc_title": metadata.get("document_title", "Official Syllabus Document"),
+                "source_doc_title": metadata.get("document_title", "Student Submitted Syllabus"),
                 "source_url": metadata.get("source_url", ""),
                 "extracted_at": datetime.utcnow().isoformat(),
-                "verification_status": "pending_verification"
+                "verification_status": "student_submitted"
             }
         }

@@ -388,3 +388,111 @@ def test_multi_university_and_btech_branches(client):
     mca_semesters = res_mca_sem.json
     mca_sem_nums = [s["semester_no"] for s in mca_semesters]
     assert mca_sem_nums == [1, 2, 3, 4]
+
+
+# ============================================================================
+# 11. STUDENT SYLLABUS SUBMISSION & SEMESTER-WISE INGESTION
+# ============================================================================
+
+def test_student_syllabus_submission_and_semester_arrangement(client):
+    """Verifies that students can submit their syllabus and have it arranged semester-wise."""
+    sample_pasted_syllabus = """
+    SEMESTER 1
+    20MCA111 - CLOUD NATIVE ARCHITECTURE
+    MODULE 1: Containers and MicroVMs (8 HOURS)
+    - Docker container lifecycle, namespaces and cgroups
+    - Container images and multi-stage builds
+    MODULE 2: Kubernetes Orchestration (10 HOURS)
+    - Pods, Deployments and ReplicaSets
+    - Ingress controllers and services
+
+    SEMESTER 2
+    20MCA112 - DISTRIBUTED SYSTEMS
+    MODULE 1: Consensus and Fault Tolerance (8 HOURS)
+    - Paxos and Raft consensus algorithms
+    - Vector clocks and Lamport timestamps
+    """
+
+    # 1. Parse syllabus outline
+    res_parse = client.post("/api/student/parse-syllabus", data={
+        "university_name": "APJ Abdul Kalam Technological University",
+        "program_name": "MCA",
+        "scheme_year": "2020",
+        "syllabus_text": sample_pasted_syllabus
+    })
+    assert res_parse.status_code == 200
+    parsed = res_parse.json
+    assert "semesters" in parsed
+    assert len(parsed["semesters"]) == 2
+    assert parsed["semesters"][0]["semester_no"] == 1
+    assert parsed["semesters"][1]["semester_no"] == 2
+
+    # Verify courses inside semesters
+    s1_course = parsed["semesters"][0]["courses"][0]
+    assert s1_course["code"] == "20MCA111"
+    assert len(s1_course["modules"]) == 2
+
+    s2_course = parsed["semesters"][1]["courses"][0]
+    assert s2_course["code"] == "20MCA112"
+
+    # 2. Save structured syllabus
+    res_save = client.post("/api/student/save-syllabus", json=parsed)
+    assert res_save.status_code == 200
+    save_result = res_save.json
+    assert save_result["success"] is True
+    assert save_result["courses_created"] >= 1
+
+
+# ============================================================================
+# 12. UNIVERSITY NOTIFICATIONS & SMART STUDY TIMETABLE AUTO-SCHEDULER
+# ============================================================================
+
+def test_university_notification_and_smart_study_timetable(client):
+    """Verifies extracting exam timetable from university notification and auto-scheduling study plan."""
+    # 1. List University Notifications
+    res_notif = client.get("/api/study/notifications")
+    assert res_notif.status_code == 200
+    notifs = res_notif.json
+    assert len(notifs) >= 1
+    assert any("KTU/EX-II" in n["circular_no"] for n in notifs)
+
+    # 2. Parse Custom Notification Text
+    sample_circular = """
+    APJ ABDUL KALAM TECHNOLOGICAL UNIVERSITY
+    EXAMINATION TIMETABLE NOTIFICATION - DEC 2026
+    Circular No: KTU/EX-I/2026/889
+    20MCA101 Mathematical Foundations - 2026-12-10 Forenoon
+    20MCA105 Advanced Software Engineering - 2026-12-18 Forenoon
+    """
+    res_parse = client.post("/api/study/parse-notification", json={
+        "text": sample_circular,
+        "title": "KTU MCA S1 Exam Timetable"
+    })
+    assert res_parse.status_code == 200
+    parse_data = res_parse.json
+    assert parse_data["success"] is True
+    notif_id = parse_data["notification_id"]
+
+    # 3. Generate Smart Study Timetable
+    res_gen = client.post("/api/study/generate-smart-timetable", json={
+        "notification_id": notif_id
+    })
+    assert res_gen.status_code == 200
+    gen_data = res_gen.json
+    assert gen_data["success"] is True
+    assert gen_data["slots_count"] == 14  # 7 days * 2 slots
+
+    # 4. Retrieve Active Weekly Study Timetable
+    res_tt = client.get("/api/study/timetable")
+    assert res_tt.status_code == 200
+    tt_data = res_tt.json
+    assert tt_data["total_slots"] == 14
+    assert "Monday" in tt_data["days"]
+    assert len(tt_data["days"]["Monday"]) == 2
+
+    # 5. Verify Study Tasks were auto-scheduled
+    res_tasks = client.get("/api/study/tasks?status=pending")
+    assert res_tasks.status_code == 200
+    tasks = res_tasks.json
+    assert any("University Timetable" in (t["description"] or "") for t in tasks)
+

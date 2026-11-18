@@ -32,6 +32,7 @@ class User(UserMixin, db.Model):
     resources = db.relationship("LearningResource", backref="user", lazy=True, cascade="all, delete-orphan")
     goals = db.relationship("AcademicGoal", backref="user", lazy=True, cascade="all, delete-orphan")
     activities = db.relationship("ActivityLog", backref="user", lazy=True, cascade="all, delete-orphan")
+    timetables = db.relationship("StudyTimetable", backref="user", lazy=True, cascade="all, delete-orphan")
 
     def set_password(self, password):
         self.password_hash = generate_password_hash(password)
@@ -335,3 +336,39 @@ class ActivityLog(db.Model):
     description = db.Column(db.String(300), nullable=False)
     reference_id = db.Column(db.Integer, nullable=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+
+class UniversityNotification(db.Model):
+    __tablename__ = "university_notification"
+
+    id = db.Column(db.Integer, primary_key=True)
+    university_id = db.Column(db.Integer, db.ForeignKey("university.id"), nullable=True)
+    program_id = db.Column(db.Integer, db.ForeignKey("program.id"), nullable=True)
+    title = db.Column(db.String(250), nullable=False)
+    notification_type = db.Column(db.String(50), default="exam_timetable")  # exam_timetable | academic_calendar | circular | class_schedule
+    circular_no = db.Column(db.String(100), nullable=True)
+    publish_date = db.Column(db.String(50), nullable=True)
+    source_url = db.Column(db.String(500), nullable=True)
+    raw_content = db.Column(db.Text, nullable=True)
+    parsed_schedule_json = db.Column(db.Text, nullable=True)  # JSON array of {course_code, course_name, exam_date, session}
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+    university = db.relationship("University", backref="notifications", lazy=True)
+    program = db.relationship("Program", backref="notifications", lazy=True)
+
+
+class StudyTimetable(db.Model):
+    __tablename__ = "study_timetable"
+
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey("user.id"), nullable=False)
+    course_id = db.Column(db.Integer, db.ForeignKey("course.id"), nullable=True)
+    day_of_week = db.Column(db.String(20), nullable=False)  # Monday, Tuesday, Wednesday, Thursday, Friday, Saturday, Sunday
+    time_slot = db.Column(db.String(30), nullable=False)    # e.g. "08:00 - 09:30", "18:00 - 19:30"
+    slot_type = db.Column(db.String(50), default="Theory Study")  # Theory Study | Topic Mastery | Revision | Practice Lab
+    target_topic_id = db.Column(db.Integer, db.ForeignKey("topic.id"), nullable=True)
+    notes = db.Column(db.String(250), nullable=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+    course = db.relationship("Course", backref="timetable_slots", lazy=True)
+    topic = db.relationship("Topic", backref="timetable_slots", lazy=True)

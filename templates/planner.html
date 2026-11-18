@@ -81,6 +81,76 @@
     <p class="page-subtitle">Organize your study goals, set task deadlines, and record your actual study hours.</p>
 </div>
 
+<!-- UNIVERSITY NOTIFICATION & SMART TIMETABLE SECTION -->
+<div class="card" style="margin-bottom: 25px; border-left: 4px solid var(--primary);">
+    <div class="card-header" style="flex-wrap: wrap; gap: 10px;">
+        <div>
+            <h2 class="card-title">📅 University Notification & Exam Timetable Auto-Scheduler</h2>
+            <div style="font-size: 0.85rem; color: var(--gray); margin-top: 4px;">
+                Fetch university examination circulars, extract course dates, and automatically generate a personalized study timetable based on your remaining topics.
+            </div>
+        </div>
+        <div style="display: flex; gap: 8px;">
+            <button class="btn btn-secondary btn-sm" onclick="toggleCustomNotifModal(true)">📋 Paste Custom Notification</button>
+            <button class="btn btn-primary btn-sm" id="generateTimetableBtn" onclick="generateSmartTimetable()">⚡ Generate Smart Timetable</button>
+        </div>
+    </div>
+
+    <!-- Active University Notification Selector -->
+    <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 15px; margin-bottom: 18px; align-items: end;">
+        <div>
+            <label class="control-label">Select University Notification / Exam Timetable</label>
+            <select id="notifSelect" class="academic-select" onchange="onNotificationChanged()">
+                <option value="">Loading university notifications...</option>
+            </select>
+        </div>
+        <div id="notifDetailsBadge" style="font-size: 0.85rem; color: var(--gray); background: #f8fafc; padding: 10px; border-radius: 8px; border: 1px solid var(--light-gray);">
+            Select an official notification above to view exam dates.
+        </div>
+    </div>
+
+    <!-- Exam Schedule Timeline Chips -->
+    <div id="examScheduleChips" style="display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 18px;"></div>
+
+    <!-- WEEKLY STUDY TIMETABLE GRID -->
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; border-top: 1px solid var(--light-gray); padding-top: 14px;">
+        <h4 style="margin: 0; color: var(--dark);">🗓️ Weekly Personalized Study Timetable</h4>
+        <button class="btn btn-secondary btn-sm" onclick="clearStudyTimetable()" style="color: #e63946;">Reset Timetable</button>
+    </div>
+
+    <div id="timetableGrid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(135px, 1fr)); gap: 12px;">
+        <p style="color: var(--gray); padding: 15px;">Loading study timetable...</p>
+    </div>
+</div>
+
+<!-- PASTE NOTIFICATION MODAL -->
+<div id="customNotifModal" style="display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.55); z-index: 9999; align-items: center; justify-content: center; padding: 20px;">
+    <div style="background: white; border-radius: 12px; max-width: 650px; width: 100%; padding: 24px; box-shadow: 0 10px 25px rgba(0,0,0,0.2);">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 14px;">
+            <h3 style="margin:0;">📋 Paste University Notification / Timetable</h3>
+            <button onclick="toggleCustomNotifModal(false)" style="background:none; border:none; font-size:1.5rem; cursor:pointer;">&times;</button>
+        </div>
+        <p style="font-size:0.88rem; color: var(--gray); margin-bottom:14px;">
+            Paste an exam circular, class schedule, or date sheet. Example: <code>20MCA101 Exam on 2026-12-10</code>.
+        </p>
+        <div style="margin-bottom:12px;">
+            <label class="control-label">Notification Title</label>
+            <input type="text" id="customNotifTitle" class="academic-select" placeholder="e.g. KTU MCA Semester 1 Final Exam Timetable">
+        </div>
+        <div style="margin-bottom:14px;">
+            <label class="control-label">Circular / Timetable Text</label>
+            <textarea id="customNotifText" class="academic-select" rows="6" placeholder="Paste circular text here...
+20MCA101 Mathematical Foundations - 10/12/2026 Forenoon
+20MCA103 Digital Fundamentals - 14/12/2026 Forenoon
+20MCA105 Advanced Software Engineering - 18/12/2026 Forenoon"></textarea>
+        </div>
+        <div style="display:flex; justify-content:flex-end; gap:10px;">
+            <button class="btn btn-secondary btn-sm" onclick="toggleCustomNotifModal(false)">Cancel</button>
+            <button class="btn btn-primary btn-sm" onclick="submitCustomNotification()">Parse & Save Schedule</button>
+        </div>
+    </div>
+</div>
+
 <div class="planner-split">
     <!-- STUDY TASKS -->
     <div>
@@ -197,6 +267,8 @@ document.addEventListener("DOMContentLoaded", () => {
 
     loadTasks();
     loadSessions();
+    loadNotifications();
+    loadStudyTimetable();
 });
 
 function toggleTaskModal(show) {
@@ -331,6 +403,165 @@ function logStudySession() {
         document.getElementById("sessionNotes").value = "";
         loadSessions();
     });
+}
+
+// ===== UNIVERSITY NOTIFICATION & SMART TIMETABLE LOGIC =====
+let cachedNotifications = [];
+
+function loadNotifications() {
+    fetch("/api/study/notifications")
+        .then(res => res.json())
+        .then(notifs => {
+            cachedNotifications = notifs;
+            const select = document.getElementById("notifSelect");
+            select.innerHTML = "";
+            if (!notifs.length) {
+                select.innerHTML = "<option value=''>No active notifications found</option>";
+                return;
+            }
+            notifs.forEach((n, idx) => {
+                select.innerHTML += `<option value="${n.id}">${n.circular_no} &bull; ${n.title}</option>`;
+            });
+            onNotificationChanged();
+        })
+        .catch(err => console.error("Error loading notifications:", err));
+}
+
+function onNotificationChanged() {
+    const select = document.getElementById("notifSelect");
+    const chipsContainer = document.getElementById("examScheduleChips");
+    const badge = document.getElementById("notifDetailsBadge");
+    chipsContainer.innerHTML = "";
+
+    const selectedNotif = cachedNotifications.find(n => n.id == select.value);
+    if (!selectedNotif) {
+        badge.innerText = "Select an official notification above to view exam dates.";
+        return;
+    }
+
+    badge.innerHTML = `<strong>${selectedNotif.university_name}</strong> &bull; Circular: ${selectedNotif.circular_no} (${selectedNotif.publish_date})`;
+
+    if (selectedNotif.schedule && selectedNotif.schedule.length) {
+        selectedNotif.schedule.forEach(item => {
+            const examDate = new Date(item.exam_date);
+            const today = new Date();
+            const daysLeft = Math.ceil((examDate - today) / (1000 * 60 * 60 * 24));
+            const urgencyColor = daysLeft <= 10 ? "#e63946" : daysLeft <= 20 ? "#f77f00" : "#4361ee";
+
+            chipsContainer.innerHTML += `
+                <div style="background: white; border: 1px solid ${urgencyColor}; border-radius: 8px; padding: 8px 12px; font-size: 0.84rem; display: flex; align-items: center; gap: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.04);">
+                    <span style="font-weight: 700; color: ${urgencyColor};">${item.course_code}</span>
+                    <span style="color: var(--dark);">${item.course_name || ''}</span>
+                    <span class="badge-pill" style="border-color:${urgencyColor}; color:${urgencyColor};">📅 ${item.exam_date} (${daysLeft > 0 ? daysLeft + ' days' : 'Today'})</span>
+                </div>
+            `;
+        });
+    }
+}
+
+function toggleCustomNotifModal(show) {
+    document.getElementById("customNotifModal").style.display = show ? "flex" : "none";
+}
+
+function submitCustomNotification() {
+    const text = document.getElementById("customNotifText").value.trim();
+    const title = document.getElementById("customNotifTitle").value.trim();
+    if (!text) {
+        alert("Please paste notification text.");
+        return;
+    }
+
+    fetch("/api/study/parse-notification", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ text: text, title: title || "Custom University Timetable" })
+    })
+    .then(res => res.json())
+    .then(result => {
+        if (result.error) throw new Error(result.error);
+        alert("✅ Timetable notification parsed and saved!");
+        toggleCustomNotifModal(false);
+        loadNotifications();
+    })
+    .catch(err => alert("Error parsing notification: " + err.message));
+}
+
+function generateSmartTimetable() {
+    const select = document.getElementById("notifSelect");
+    const btn = document.getElementById("generateTimetableBtn");
+    btn.disabled = true;
+    btn.innerText = "Generating Smart Plan...";
+
+    const payload = {};
+    if (select.value) {
+        payload.notification_id = select.value;
+    }
+
+    fetch("/api/study/generate-smart-timetable", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload)
+    })
+    .then(res => res.json())
+    .then(result => {
+        if (result.error) throw new Error(result.error);
+        alert("🎉 " + result.message);
+        loadStudyTimetable();
+        loadTasks(); // refresh task list with new scheduled tasks
+    })
+    .catch(err => alert("Error: " + err.message))
+    .finally(() => {
+        btn.disabled = false;
+        btn.innerText = "⚡ Generate Smart Timetable";
+    });
+}
+
+function loadStudyTimetable() {
+    fetch("/api/study/timetable")
+        .then(res => res.json())
+        .then(data => {
+            const grid = document.getElementById("timetableGrid");
+            grid.innerHTML = "";
+
+            if (!data.total_slots) {
+                grid.innerHTML = `
+                    <div style="grid-column: 1 / -1; text-align: center; padding: 25px; background: #f8fafc; border-radius: 10px; border: 1px dashed var(--light-gray);">
+                        <p style="color: var(--gray); margin-bottom: 8px;">No study timetable generated yet.</p>
+                        <p style="font-size: 0.85rem; color: var(--gray);">Select an official university notification above and click <strong>Generate Smart Timetable</strong> to automatically create balanced daily study sessions!</p>
+                    </div>
+                `;
+                return;
+            }
+
+            const days = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
+            days.forEach(day => {
+                const daySlots = data.days[day] || [];
+                let slotsHtml = "";
+                daySlots.forEach(s => {
+                    slotsHtml += `
+                        <div style="background: white; border-radius: 8px; padding: 9px; margin-top: 8px; border: 1px solid #e2e8f0; font-size: 0.8rem; box-shadow: 0 1px 3px rgba(0,0,0,0.03);">
+                            <div style="font-weight: 700; color: var(--primary);">${s.time_slot}</div>
+                            <div style="font-weight: 600; color: var(--dark); margin-top: 3px;">${s.course_code}</div>
+                            <div style="color: var(--gray); font-size: 0.74rem; margin-top: 2px;">${s.slot_type}</div>
+                        </div>
+                    `;
+                });
+
+                grid.innerHTML += `
+                    <div style="background: #f8fafc; border: 1px solid var(--light-gray); border-radius: 10px; padding: 12px; min-height: 160px;">
+                        <strong style="color: var(--dark); font-size: 0.9rem; border-bottom: 2px solid var(--primary); padding-bottom: 4px; display: block; margin-bottom: 8px;">${day}</strong>
+                        ${slotsHtml || '<div style="font-size:0.75rem; color:var(--gray); margin-top:10px;">Free / Rest Day</div>'}
+                    </div>
+                `;
+            });
+        })
+        .catch(err => console.error("Error loading timetable:", err));
+}
+
+function clearStudyTimetable() {
+    if (!confirm("Are you sure you want to reset your study timetable?")) return;
+    fetch("/api/study/timetable", { method: "DELETE" })
+        .then(() => loadStudyTimetable());
 }
 </script>
 {% endblock %}
