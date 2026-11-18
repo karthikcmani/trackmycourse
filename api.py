@@ -1,7 +1,7 @@
 """
 TrackMyCourse — Core Academic & Progress API Blueprint
 Preserves existing API contracts while securing multi-user isolation,
-eliminating data leaks, and adding detailed course summaries.
+eliminating data leaks, and adding detailed course summaries and live university search.
 """
 from flask import Blueprint, request, jsonify
 from flask_login import current_user
@@ -31,14 +31,31 @@ def get_current_user_id():
 
 
 # ============================================================================
-# ACADEMIC SELECTION ENDPOINTS (PRESERVED CONTRACTS)
+# ACADEMIC SELECTION ENDPOINTS (PRESERVED & ENHANCED CONTRACTS)
 # ============================================================================
 
 @api.route("/universities")
 def get_universities():
-    universities = University.query.order_by(University.name).all()
+    search_query = request.args.get("q", "").strip()
+    query = University.query
+    if search_query:
+        query = query.filter(
+            db.or_(
+                University.name.ilike(f"%{search_query}%"),
+                University.code.ilike(f"%{search_query}%"),
+                University.state.ilike(f"%{search_query}%")
+            )
+        )
+    universities = query.order_by(University.name.asc()).all()
     return jsonify([
-        {"id": u.id, "name": u.name, "code": u.code, "state": u.state}
+        {
+            "id": u.id,
+            "name": u.name,
+            "code": u.code or "",
+            "state": u.state or "",
+            "country": u.country or "India",
+            "website": u.website or ""
+        }
         for u in universities
     ])
 
@@ -53,7 +70,7 @@ def get_programs():
     except ValueError:
         return jsonify({"error": "Invalid university_id"}), 400
 
-    programs = Program.query.filter_by(university_id=u_id).order_by(Program.name).all()
+    programs = Program.query.filter_by(university_id=u_id).order_by(Program.name.asc()).all()
     return jsonify([
         {"id": p.id, "name": p.name, "code": p.code, "degree_type": p.degree_type}
         for p in programs
@@ -70,7 +87,7 @@ def get_streams():
     except ValueError:
         return jsonify({"error": "Invalid program_id"}), 400
 
-    streams = Stream.query.filter_by(program_id=p_id).order_by(Stream.name).all()
+    streams = Stream.query.filter_by(program_id=p_id).order_by(Stream.name.asc()).all()
     return jsonify([
         {"id": s.id, "name": s.name, "code": s.code}
         for s in streams
@@ -93,6 +110,12 @@ def get_schemes():
 
     if stream_id and stream_id.isdigit():
         query = query.filter_by(stream_id=int(stream_id))
+    else:
+        # If program has streams, but no stream_id passed yet, return empty
+        has_streams = Stream.query.filter_by(program_id=p_id).count() > 0
+        if has_streams:
+            return jsonify([])
+        query = query.filter(Scheme.stream_id.is_(None))
 
     schemes = query.order_by(Scheme.year.desc()).all()
     return jsonify([
@@ -111,7 +134,8 @@ def get_semesters():
     except ValueError:
         return jsonify({"error": "Invalid scheme_id"}), 400
 
-    semesters = Semester.query.filter_by(scheme_id=s_id).order_by(Semester.semester_no).all()
+    # Ensure strictly sorted in ascending order (Semester 1, 2, 3, 4, ...)
+    semesters = Semester.query.filter_by(scheme_id=s_id).order_by(Semester.semester_no.asc()).all()
     return jsonify([
         {"id": s.id, "semester_no": s.semester_no}
         for s in semesters
@@ -128,7 +152,7 @@ def get_courses():
     except ValueError:
         return jsonify({"error": "Invalid semester_id"}), 400
 
-    courses = Course.query.filter_by(semester_id=s_id).order_by(Course.name).all()
+    courses = Course.query.filter_by(semester_id=s_id).order_by(Course.code.asc().nullslast(), Course.name.asc()).all()
     return jsonify([
         {
             "id": c.id,
@@ -151,7 +175,7 @@ def get_syllabus():
     except ValueError:
         return jsonify({"error": "Invalid course_id"}), 400
 
-    modules = Module.query.filter_by(course_id=c_id).order_by(Module.module_no, Module.id).all()
+    modules = Module.query.filter_by(course_id=c_id).order_by(Module.module_no.asc().nullslast(), Module.id.asc()).all()
 
     data = []
     for m in modules:
@@ -188,7 +212,7 @@ def save_progress():
 
     user_id = get_current_user_id()
 
-    topic = Topic.query.get(topic_id)
+    topic = db.session.get(Topic, topic_id)
     if not topic:
         return jsonify({"error": "Topic not found"}), 404
 
@@ -254,7 +278,9 @@ def load_progress(course_id):
 def course_summary(course_id):
     """Provides complete course analytics: total, completed, remaining, percentage."""
     user_id = get_current_user_id()
-    course = Course.query.get_or_404(course_id)
+    course = db.session.get(Course, course_id)
+    if not course:
+        return jsonify({"error": "Course not found"}), 404
 
     total_topics = (
         Topic.query
@@ -280,8 +306,8 @@ def course_summary(course_id):
     return jsonify({
         "course_id": course.id,
         "course_name": course.name,
-        "course_code": course.code,
-        "credits": course.credits,
+        "course_code": course.code or "",
+        "credits": course.credits or 4,
         "total_topics": total_topics,
         "completed_topics": completed_topics,
         "remaining_topics": max(0, total_topics - completed_topics),

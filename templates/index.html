@@ -7,6 +7,11 @@
     /* ===== COURSE PROGRESS PAGE STYLES (PERSONAL-MODE REFINED) ===== */
     .progress-hero {
         margin-bottom: 25px;
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-end;
+        flex-wrap: wrap;
+        gap: 15px;
     }
 
     .page-title {
@@ -24,7 +29,7 @@
     /* Academic Selection Grid */
     .selection-grid {
         display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
         gap: 16px;
         margin-bottom: 25px;
         background: white;
@@ -246,6 +251,7 @@
         font-size: 0.95rem;
         color: #333;
         flex: 1;
+        cursor: pointer;
     }
 
     .topic-completed .topic-name {
@@ -270,14 +276,21 @@
 
 {% block content %}
 <div class="progress-hero">
-    <h1 class="page-title">Course Progress Tracking</h1>
-    <p class="page-subtitle">Select your academic program and track your topic-level syllabus completion in real time.</p>
+    <div>
+        <h1 class="page-title">Course Progress Tracking</h1>
+        <p class="page-subtitle">Select your academic institution, program branch, and semester to track topic-level syllabus completion.</p>
+    </div>
+    <div>
+        <a href="{{ url_for('admin_view') }}" class="btn btn-secondary btn-sm">
+            📄 Upload / Ingest Official Syllabus PDF &rarr;
+        </a>
+    </div>
 </div>
 
 <!-- CASCADING ACADEMIC SELECTION CONTROLS -->
 <div class="selection-grid">
     <div class="control-group">
-        <label class="control-label" for="university">1. University</label>
+        <label class="control-label" for="university">1. University (UGC / AICTE)</label>
         <select id="university" class="academic-select">
             <option value="">Select University</option>
         </select>
@@ -291,9 +304,9 @@
     </div>
 
     <div class="control-group" id="streamGroup" style="display: none;">
-        <label class="control-label" for="stream">3. Stream</label>
+        <label class="control-label" for="stream">3. Branch / Stream</label>
         <select id="stream" class="academic-select">
-            <option value="">Select Stream</option>
+            <option value="">Select Branch</option>
         </select>
     </div>
 
@@ -324,7 +337,7 @@
     <div class="course-info">
         <h3 id="currentCourseTitle">Course Syllabus</h3>
         <div class="course-meta">
-            <span class="badge-pill" id="currentCourseCode">CRS</span>
+            <span class="badge-pill" id="currentCourseCode">CORE</span>
             <span class="badge-pill" id="currentCourseCredits">4 Credits</span>
             <span id="currentCourseType">Theory Course</span>
         </div>
@@ -361,25 +374,26 @@ document.addEventListener("DOMContentLoaded", () => {
     const course = document.getElementById("course");
     const syllabusDiv = document.getElementById("syllabus");
     const courseBanner = document.getElementById("courseBanner");
-    const initialPrompt = document.getElementById("initialPrompt");
 
-    // Track total topics for accurate percentage
     let currentTotalTopics = 0;
 
     // 1. Load Universities
     fetch("/api/universities")
         .then(res => res.json())
         .then(data => {
+            uni.innerHTML = '<option value="">Select University</option>';
             data.forEach(u => {
-                uni.innerHTML += `<option value="${u.id}">${u.name}${u.code ? ' (' + u.code + ')' : ''}</option>`;
+                uni.innerHTML += `<option value="${u.id}">${u.name} (${u.code || u.state})</option>`;
             });
 
-            // Check URL parameters or auto-select KTU
+            // Check URL parameters for pre-selected course
             const urlParams = new URLSearchParams(window.location.search);
             const preSelectCourse = urlParams.get("course_id");
 
             if (data.length > 0) {
-                uni.value = data[0].id;
+                // Find KTU or select first
+                const ktuUni = data.find(u => u.code === "KTU" || u.name.includes("APJ Abdul Kalam"));
+                uni.value = ktuUni ? ktuUni.id : data[0].id;
                 loadPrograms(uni.value, preSelectCourse);
             }
         })
@@ -397,10 +411,12 @@ document.addEventListener("DOMContentLoaded", () => {
             .then(data => {
                 prog.innerHTML = '<option value="">Select Program</option>';
                 data.forEach(p => {
-                    prog.innerHTML += `<option value="${p.id}">${p.name}</option>`;
+                    prog.innerHTML += `<option value="${p.id}">${p.name} (${p.degree_type || ''})</option>`;
                 });
                 if (data.length > 0) {
-                    prog.value = data[0].id; // Default to MCA if available
+                    // Default to MCA if available, otherwise first
+                    const mcaProg = data.find(p => p.name === "MCA");
+                    prog.value = mcaProg ? mcaProg.id : data[0].id;
                     loadStreamsOrSchemes(prog.value, preSelectCourse);
                 }
             });
@@ -421,15 +437,21 @@ document.addEventListener("DOMContentLoaded", () => {
                     loadSchemes("", preSelectCourse);
                 } else {
                     streamGroup.style.display = "block";
-                    stream.innerHTML = '<option value="">Select Stream</option>';
+                    stream.innerHTML = '<option value="">Select Branch / Stream</option>';
                     data.forEach(s => {
-                        stream.innerHTML += `<option value="${s.id}">${s.name}</option>`;
+                        stream.innerHTML += `<option value="${s.id}">${s.name} (${s.code || ''})</option>`;
                     });
+                    // Default to first stream (e.g. CSE)
+                    stream.value = data[0].id;
+                    loadSchemes(stream.value, preSelectCourse);
                 }
             });
     }
 
-    stream.onchange = () => loadSchemes(stream.value);
+    stream.onchange = () => {
+        resetBelow("scheme");
+        loadSchemes(stream.value);
+    };
 
     function loadSchemes(streamId = "", preSelectCourse = null) {
         resetBelow("scheme");
@@ -483,20 +505,17 @@ document.addEventListener("DOMContentLoaded", () => {
             .then(data => {
                 course.innerHTML = '<option value="">Select Course</option>';
                 data.forEach(c => {
-                    course.innerHTML += `<option value="${c.id}" data-name="${c.name}" data-code="${c.code}" data-credits="${c.credits}">${c.name}${c.code ? ' (' + c.code + ')' : ''}</option>`;
+                    const label = c.code ? `${c.code} - ${c.name}` : c.name;
+                    course.innerHTML += `<option value="${c.id}" data-name="${c.name}" data-code="${c.code || 'CORE'}" data-credits="${c.credits || 4}" data-type="${c.course_type || 'Theory'}">${label}</option>`;
                 });
 
                 if (preSelectCourse) {
                     course.value = preSelectCourse;
                     renderCourseSyllabus(course.value);
                 } else if (data.length > 0) {
-                    // Look for Advanced Software Engineering or first course
-                    const aseOption = Array.from(course.options).find(opt => opt.text.includes("Advanced Software Engineering"));
-                    if (aseOption) {
-                        course.value = aseOption.value;
-                    } else {
-                        course.value = data[0].id;
-                    }
+                    // Look for Advanced Software Engineering or select first
+                    const aseOpt = Array.from(course.options).find(opt => opt.text.includes("Advanced Software Engineering"));
+                    course.value = aseOpt ? aseOpt.value : data[0].id;
                     renderCourseSyllabus(course.value);
                 }
             });
@@ -516,13 +535,15 @@ document.addEventListener("DOMContentLoaded", () => {
         const courseName = selectedOpt ? selectedOpt.getAttribute("data-name") || selectedOpt.text : "Course Syllabus";
         const courseCode = selectedOpt ? selectedOpt.getAttribute("data-code") || "CORE" : "CORE";
         const credits = selectedOpt ? selectedOpt.getAttribute("data-credits") || "4" : "4";
+        const courseType = selectedOpt ? selectedOpt.getAttribute("data-type") || "Theory" : "Theory";
 
         document.getElementById("currentCourseTitle").innerText = courseName;
         document.getElementById("currentCourseCode").innerText = courseCode;
         document.getElementById("currentCourseCredits").innerText = `${credits} Credits`;
+        document.getElementById("currentCourseType").innerText = courseType;
         courseBanner.style.display = "flex";
 
-        syllabusDiv.innerHTML = '<div style="text-align:center;padding:40px;"><p>Loading syllabus...</p></div>';
+        syllabusDiv.innerHTML = '<div style="text-align:center;padding:40px;"><p>Loading official curriculum topics...</p></div>';
 
         fetch(`/api/syllabus?course_id=${courseId}`)
             .then(res => res.json())
@@ -531,8 +552,9 @@ document.addEventListener("DOMContentLoaded", () => {
                     syllabusDiv.innerHTML = `
                         <div class="empty-syllabus-state">
                             <span>📄</span>
-                            <h3>No Syllabus Topics Added Yet</h3>
-                            <p>This course currently has no registered syllabus topics in the academic catalog.</p>
+                            <h3>Syllabus Topics Awaiting Ingestion</h3>
+                            <p>This course is verified in the academic catalogue. Upload or import the official PDF syllabus to populate topics.</p>
+                            <a href="/admin" class="btn btn-secondary btn-sm" style="margin-top:10px;">Upload Official Syllabus PDF &rarr;</a>
                         </div>
                     `;
                     currentTotalTopics = 0;
@@ -640,7 +662,7 @@ document.addEventListener("DOMContentLoaded", () => {
     function resetBelow(level) {
         if (level === "program") prog.innerHTML = '<option value="">Select Program</option>';
         if (["program", "stream"].includes(level)) {
-            stream.innerHTML = '<option value="">Select Stream</option>';
+            stream.innerHTML = '<option value="">Select Branch</option>';
             streamGroup.style.display = "none";
         }
         if (["program", "stream", "scheme"].includes(level)) scheme.innerHTML = '<option value="">Select Scheme</option>';

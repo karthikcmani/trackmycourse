@@ -34,7 +34,7 @@ def test_academic_dropdown_hierarchy(client):
     assert res_uni.status_code == 200
     unis = res_uni.json
     assert len(unis) >= 1
-    ktu = next((u for u in unis if "KTU" in u["name"]), None)
+    ktu = next((u for u in unis if u.get("code") == "KTU" or "KTU" in u.get("name", "") or "Abdul Kalam" in u.get("name", "")), None)
     assert ktu is not None
 
     # 2. Programs for KTU
@@ -146,9 +146,22 @@ def test_regression_maths_and_s2_courses(client):
 # 4. ZERO TOPIC HANDLING & SAFE COMPUTATION
 # ============================================================================
 
-def test_zero_topic_course_summary(client):
-    """A placeholder course with 0 topics must return 0.0% and never NaN."""
-    res = client.get("/api/course-summary/1")  # Course 1: Digital Fundamentals (0 topics)
+def test_zero_topic_course_summary(client, app):
+    """A placeholder course with 0 topics must return 0.0% and never NaN or ZeroDivisionError."""
+    with app.app_context():
+        empty_course = Course.query.filter(~Course.modules.any()).first()
+        if not empty_course:
+            empty_course = Course(
+                code="EMPTY100",
+                name="Placeholder Empty Course",
+                semester_id=1,
+                credits=0
+            )
+            db.session.add(empty_course)
+            db.session.commit()
+        empty_id = empty_course.id
+
+    res = client.get(f"/api/course-summary/{empty_id}")
     assert res.status_code == 200
     data = res.json
     assert data["total_topics"] == 0
@@ -307,3 +320,58 @@ def test_syllabus_parser_extraction():
     assert c["modules"][0]["hours"] == 8
     assert len(c["modules"][0]["topics"]) == 3
     assert len(c["modules"][1]["topics"]) == 3
+
+
+# ============================================================================
+# 10. MULTI-UNIVERSITY & BRANCH EXPANSION VERIFICATION
+# ============================================================================
+
+def test_multi_university_and_btech_branches(client):
+    # 1. Check multiple universities exist
+    res = client.get("/api/universities")
+    assert res.status_code == 200
+    unis = res.json
+    uni_codes = {u.get("code") for u in unis}
+    # Check key UGC/AICTE universities are present
+    assert "KTU" in uni_codes
+    assert "VTU" in uni_codes
+    assert "AU" in uni_codes or any("Anna" in u["name"] for u in unis)
+
+    # 2. Check search filter
+    res_search = client.get("/api/universities?q=vtu")
+    assert res_search.status_code == 200
+    assert any("VTU" in u.get("code", "") or "Visvesvaraya" in u.get("name", "") for u in res_search.json)
+
+    # 3. Check KTU B.Tech branches
+    ktu = next(u for u in unis if u.get("code") == "KTU")
+    res_prog = client.get(f"/api/programs?university_id={ktu['id']}")
+    btech = next(p for p in res_prog.json if p["code"] == "BTech" or "B.Tech" in p["name"])
+    assert btech is not None
+
+    res_streams = client.get(f"/api/streams?program_id={btech['id']}")
+    assert res_streams.status_code == 200
+    streams = res_streams.json
+    stream_codes = {s["code"] for s in streams}
+    assert "CSE" in stream_codes
+    assert "ECE" in stream_codes
+    assert "ME" in stream_codes
+
+    # 4. Check B.Tech semesters (8 semesters in ascending order)
+    res_schemes = client.get(f"/api/schemes?program_id={btech['id']}&stream_id={streams[0]['id']}")
+    assert res_schemes.status_code == 200
+    scheme = res_schemes.json[0]
+    res_sem = client.get(f"/api/semesters?scheme_id={scheme['id']}")
+    assert res_sem.status_code == 200
+    semesters = res_sem.json
+    assert len(semesters) == 8
+    sem_numbers = [s["semester_no"] for s in semesters]
+    assert sem_numbers == [1, 2, 3, 4, 5, 6, 7, 8]
+
+    # 5. Check MCA semesters (strictly ordered 1, 2, 3, 4)
+    mca = next(p for p in res_prog.json if p["code"] == "MCA")
+    res_mca_schemes = client.get(f"/api/schemes?program_id={mca['id']}")
+    mca_scheme = res_mca_schemes.json[0]
+    res_mca_sem = client.get(f"/api/semesters?scheme_id={mca_scheme['id']}")
+    mca_semesters = res_mca_sem.json
+    mca_sem_nums = [s["semester_no"] for s in mca_semesters]
+    assert mca_sem_nums == [1, 2, 3, 4]
