@@ -49,15 +49,15 @@ def test_academic_dropdown_hierarchy(client):
     assert res_stream.status_code == 200
     assert len(res_stream.json) == 0
 
-    # 4. Schemes for MCA
+    # 4. Schemes for MCA (Official KTU Scheme 2020)
     res_scheme = client.get(f"/api/schemes?program_id={mca['id']}")
     assert res_scheme.status_code == 200
     schemes = res_scheme.json
-    scheme_2021 = next((s for s in schemes if s["year"] == "2021"), None)
-    assert scheme_2021 is not None
+    scheme_2020 = next((s for s in schemes if s["year"] == "2020"), None)
+    assert scheme_2020 is not None, "KTU MCA must be Scheme 2020 (official KTU 2020 Regulations)"
 
-    # 5. Semesters for Scheme 2021
-    res_sem = client.get(f"/api/semesters?scheme_id={scheme_2021['id']}")
+    # 5. Semesters for Scheme 2020
+    res_sem = client.get(f"/api/semesters?scheme_id={scheme_2020['id']}")
     assert res_sem.status_code == 200
     sems = res_sem.json
     s1 = next((s for s in sems if s["semester_no"] == 1), None)
@@ -76,7 +76,7 @@ def test_academic_dropdown_hierarchy(client):
 
 def test_regression_ase_scenario(client):
     """
-    Scenario: KTU -> MCA -> Scheme 2021 -> Semester 1 -> Advanced Software Engineering
+    Scenario: KTU -> MCA -> Scheme 2020 -> Semester 1 -> Advanced Software Engineering
     Course must load 5 modules, 49 topics, and verified progress (~88%).
     """
     # 1. Find ASE Course
@@ -147,26 +147,36 @@ def test_regression_maths_and_s2_courses(client):
 # ============================================================================
 
 def test_zero_topic_course_summary(client, app):
-    """A placeholder course with 0 topics must return 0.0% and never NaN or ZeroDivisionError."""
+    """A course with 0 topics must return 0.0% and never NaN or ZeroDivisionError."""
+    created_temp = False
     with app.app_context():
         empty_course = Course.query.filter(~Course.modules.any()).first()
         if not empty_course:
             empty_course = Course(
-                code="EMPTY100",
-                name="Placeholder Empty Course",
+                code="ZERO001",
+                name="Empty Test Course",
                 semester_id=1,
                 credits=0
             )
             db.session.add(empty_course)
             db.session.commit()
+            created_temp = True
         empty_id = empty_course.id
 
-    res = client.get(f"/api/course-summary/{empty_id}")
-    assert res.status_code == 200
-    data = res.json
-    assert data["total_topics"] == 0
-    assert data["completed_topics"] == 0
-    assert data["percentage"] == 0.0
+    try:
+        res = client.get(f"/api/course-summary/{empty_id}")
+        assert res.status_code == 200
+        data = res.json
+        assert data["total_topics"] == 0
+        assert data["completed_topics"] == 0
+        assert data["percentage"] == 0.0
+    finally:
+        if created_temp:
+            with app.app_context():
+                c = db.session.get(Course, empty_id)
+                if c:
+                    db.session.delete(c)
+                    db.session.commit()
 
 
 # ============================================================================
@@ -327,20 +337,18 @@ def test_syllabus_parser_extraction():
 # ============================================================================
 
 def test_multi_university_and_btech_branches(client):
-    # 1. Check multiple universities exist
+    # 1. Check verified institutions exist (KTU and AICTE National Model)
     res = client.get("/api/universities")
     assert res.status_code == 200
     unis = res.json
     uni_codes = {u.get("code") for u in unis}
-    # Check key UGC/AICTE universities are present
     assert "KTU" in uni_codes
-    assert "VTU" in uni_codes
-    assert "AU" in uni_codes or any("Anna" in u["name"] for u in unis)
+    assert "AICTE" in uni_codes
 
     # 2. Check search filter
-    res_search = client.get("/api/universities?q=vtu")
+    res_search = client.get("/api/universities?q=aicte")
     assert res_search.status_code == 200
-    assert any("VTU" in u.get("code", "") or "Visvesvaraya" in u.get("name", "") for u in res_search.json)
+    assert any("AICTE" in u.get("code", "") for u in res_search.json)
 
     # 3. Check KTU B.Tech branches
     ktu = next(u for u in unis if u.get("code") == "KTU")
@@ -355,6 +363,9 @@ def test_multi_university_and_btech_branches(client):
     assert "CSE" in stream_codes
     assert "ECE" in stream_codes
     assert "ME" in stream_codes
+    assert "CE" in stream_codes
+    assert "EEE" in stream_codes
+    assert "IT" in stream_codes
 
     # 4. Check B.Tech semesters (8 semesters in ascending order)
     res_schemes = client.get(f"/api/schemes?program_id={btech['id']}&stream_id={streams[0]['id']}")
@@ -367,10 +378,12 @@ def test_multi_university_and_btech_branches(client):
     sem_numbers = [s["semester_no"] for s in semesters]
     assert sem_numbers == [1, 2, 3, 4, 5, 6, 7, 8]
 
-    # 5. Check MCA semesters (strictly ordered 1, 2, 3, 4)
+    # 5. Check KTU MCA scheme (Scheme 2020) and semesters (strictly ordered 1, 2, 3, 4)
     mca = next(p for p in res_prog.json if p["code"] == "MCA")
     res_mca_schemes = client.get(f"/api/schemes?program_id={mca['id']}")
-    mca_scheme = res_mca_schemes.json[0]
+    mca_schemes = res_mca_schemes.json
+    assert any(s["year"] == "2020" for s in mca_schemes), "Must be Scheme 2020"
+    mca_scheme = next(s for s in mca_schemes if s["year"] == "2020")
     res_mca_sem = client.get(f"/api/semesters?scheme_id={mca_scheme['id']}")
     mca_semesters = res_mca_sem.json
     mca_sem_nums = [s["semester_no"] for s in mca_semesters]

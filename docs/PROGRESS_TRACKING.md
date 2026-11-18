@@ -22,7 +22,7 @@ TrackMyCourse's progress tracking engine is designed around verifiable, topic-le
 
 The primary regression scenario mandated in the product specification was validated:
 
-- **Hierarchy**: KTU $\rightarrow$ MCA $\rightarrow$ Scheme 2021 $\rightarrow$ Semester 1 $\rightarrow$ Advanced Software Engineering (Course Code: `20MCA105`).
+- **Hierarchy**: KTU $\rightarrow$ MCA $\rightarrow$ Scheme 2020 $\rightarrow$ Semester 1 $\rightarrow$ Advanced Software Engineering (Course Code: `20MCA105`). *(Note: Previously mislabeled as Scheme 2021 in early seed data; corrected to official KTU Scheme 2020 Regulations).*
 - **Module Count**: 5 Modules
   - Module 1 (8 Hours): 9 topics
   - Module 2 (10 Hours): 10 topics

@@ -67,7 +67,7 @@ Analysis of existing data in `instance/trackmycourse.db`:
 
 ### 3.4 Regression Scenario: Advanced Software Engineering (ASE)
 - In addition to the database courses above, `seed_ase.py` defines the official syllabus for **Advanced Software Engineering** (Course under MCA S1) containing 5 modules and 49 topics.
-- The regression testing scenario specified in the prompt requires that KTU → MCA → Scheme 2021 → Semester 1 → Advanced Software Engineering displays correctly with modules and topics, and tracks progress up to ~88% (~43 of 49 topics).
+- The regression testing scenario requires that KTU → MCA → Scheme 2020 (official KTU 2020 Regulations, formerly mislabeled 2021 in early seeds) → Semester 1 → Advanced Software Engineering displays correctly with modules and topics, and tracks progress up to ~88% (~43 of 49 topics).
 
 ---
 
@@ -160,7 +160,7 @@ Analysis of existing data in `instance/trackmycourse.db`:
 4. **Phase 4 — Course Progress System & Regression Verification**:
    - Preserve `templates/index.html` structure and API endpoints.
    - Ensure progress is strictly scoped to the logged-in student.
-   - Verify the regression scenario for KTU → MCA → Scheme 2021 → Semester 1 → Advanced Software Engineering.
+   - Verify the regression scenario for KTU → MCA → Scheme 2020 → Semester 1 → Advanced Software Engineering.
 
 5. **Phases 5 through 10**:
    - Systematically implement the Student Dashboard, Study Planner, Notes, Resources, Analytics, Admin Management, QA/Testing suite, and Deployment configuration.

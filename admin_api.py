@@ -67,7 +67,7 @@ def upload_syllabus_document():
     metadata = {
         "university_name": request.form.get("university_name", "APJ Abdul Kalam Technological University"),
         "program_name": request.form.get("program_name", "MCA"),
-        "scheme_year": request.form.get("scheme_year", "2021"),
+        "scheme_year": request.form.get("scheme_year", "2020"),
         "semester_no": int(request.form.get("semester_no", 1)),
         "course_name": request.form.get("course_name", ""),
         "course_code": request.form.get("course_code", ""),
@@ -142,7 +142,7 @@ def publish_syllabus_import(import_id):
         db.session.flush()
 
     # 3. Resolve or Create Scheme
-    scheme_year = str(data.get("scheme", "2021"))
+    scheme_year = str(data.get("scheme", "2020"))
     scheme = Scheme.query.filter_by(year=scheme_year, program_id=prog.id).first()
     if not scheme:
         scheme = Scheme(year=scheme_year, program_id=prog.id)

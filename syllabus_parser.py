@@ -266,7 +266,7 @@ class SyllabusParser:
         return {
             "university": metadata.get("university_name", "APJ Abdul Kalam Technological University"),
             "program": metadata.get("program_name", "MCA"),
-            "scheme": metadata.get("scheme_year", "2021"),
+            "scheme": metadata.get("scheme_year", "2020"),
             "semesters": [
                 {
                     "semester_no": default_sem,

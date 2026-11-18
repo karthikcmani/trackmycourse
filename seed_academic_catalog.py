@@ -36,18 +36,18 @@ def seed_academic_catalog():
             db.session.commit()
             print("[+] Seeded Program: MCA")
 
-        # 3. Scheme 2021
-        scheme_2021 = Scheme.query.filter_by(year="2021", program_id=mca.id).first()
-        if not scheme_2021:
-            scheme_2021 = Scheme(year="2021", program_id=mca.id, stream_id=None)
-            db.session.add(scheme_2021)
+        # 3. Scheme 2020 (Official KTU MCA Scheme 2020)
+        scheme_2020 = Scheme.query.filter_by(year="2020", program_id=mca.id).first()
+        if not scheme_2020:
+            scheme_2020 = Scheme(year="2020", program_id=mca.id, stream_id=None)
+            db.session.add(scheme_2020)
             db.session.commit()
-            print("[+] Seeded Scheme: 2021")
+            print("[+] Seeded Scheme: 2020")
 
         # 4. Semester 1
-        s1 = Semester.query.filter_by(scheme_id=scheme_2021.id, semester_no=1).first()
+        s1 = Semester.query.filter_by(scheme_id=scheme_2020.id, semester_no=1).first()
         if not s1:
-            s1 = Semester(semester_no=1, scheme_id=scheme_2021.id)
+            s1 = Semester(semester_no=1, scheme_id=scheme_2020.id)
             db.session.add(s1)
             db.session.commit()
             print("[+] Seeded Semester 1")
@@ -188,13 +188,13 @@ def seed_academic_catalog():
             source = SyllabusSource(
                 university_id=ktu.id,
                 program_id=mca.id,
-                scheme_id=scheme_2021.id,
+                scheme_id=scheme_2020.id,
                 course_id=ase.id,
                 document_title="20MCA105 - Advanced Software Engineering Curriculum",
                 source_url="https://ktu.edu.in/eu/att/attachments.htm",
-                publication_date="2021-06-15",
+                publication_date="2020-07-01",
                 verification_status="verified",
-                version="2021.1",
+                version="2020.1",
                 verified_by="KTU Academic Council",
                 notes="Official APJ Abdul Kalam Technological University MCA Semester 1 Syllabus"
             )

@@ -109,7 +109,12 @@ def get_schemes():
     query = Scheme.query.filter_by(program_id=p_id)
 
     if stream_id and stream_id.isdigit():
-        query = query.filter_by(stream_id=int(stream_id))
+        query = query.filter(
+            db.or_(
+                Scheme.stream_id == int(stream_id),
+                Scheme.stream_id.is_(None)
+            )
+        )
     else:
         # If program has streams, but no stream_id passed yet, return empty
         has_streams = Stream.query.filter_by(program_id=p_id).count() > 0
