@@ -633,10 +633,18 @@ document.addEventListener("DOMContentLoaded", () => {
                 if (!modules || modules.length === 0) {
                     syllabusDiv.innerHTML = `
                         <div class="empty-syllabus-state">
-                            <span>📄</span>
-                            <h3>Syllabus Topics Awaiting Ingestion</h3>
-                            <p>This course is verified in the academic catalogue. Upload or import the official PDF syllabus to populate topics.</p>
-                            <a href="/admin" class="btn btn-secondary btn-sm" style="margin-top:10px;">Upload Official Syllabus PDF &rarr;</a>
+                            <span style="font-size: 2.8rem;">📋</span>
+                            <h3 style="color: var(--dark); margin-top: 10px;">Official Syllabus Not Ingested Yet</h3>
+                            <p style="max-width: 580px; margin: 8px auto 16px; color: var(--gray); font-size: 0.92rem; line-height: 1.5;">
+                                We have not verified or ingested the official curriculum document for <strong>${courseName}</strong> yet.
+                                TrackMyCourse strictly adheres to authentic sources and never generates placeholder or dummy topics.
+                            </p>
+                            <div style="display: flex; justify-content: center; gap: 10px; flex-wrap: wrap;">
+                                <button class="btn btn-primary btn-sm" onclick="openStudentSyllabusModalForCourse('${courseCode}', '${courseName}')">
+                                    📥 Submit Official Syllabus for This Course &rarr;
+                                </button>
+                                <a href="/admin" class="btn btn-secondary btn-sm">Upload PDF via Ingestion Portal &rarr;</a>
+                            </div>
                         </div>
                     `;
                     currentTotalTopics = 0;
@@ -786,6 +794,22 @@ document.addEventListener("DOMContentLoaded", () => {
             }
         };
     }
+
+    window.openStudentSyllabusModalForCourse = (courseCode, courseName) => {
+        document.getElementById("studentSyllabusModal").style.display = "flex";
+        if (uni.selectedOptions.length && uni.value) {
+            document.getElementById("subUniName").value = uni.selectedOptions[0].text.split(" (")[0];
+        }
+        if (prog.selectedOptions.length && prog.value) {
+            document.getElementById("subProgName").value = prog.selectedOptions[0].text.split(" (")[0];
+        }
+        if (scheme.selectedOptions.length && scheme.value) {
+            document.getElementById("subSchemeYear").value = scheme.selectedOptions[0].text;
+        }
+        switchInputTab("paste");
+        const defaultTpl = `${sem.selectedOptions.length ? sem.selectedOptions[0].text : 'Semester 1'}\n${courseCode}: ${courseName}\nModule 1: (Hours)\n- Topic 1\n- Topic 2`;
+        document.getElementById("subPasteText").value = defaultTpl;
+    };
 
     window.switchInputTab = (tab) => {
         currentInputTab = tab;

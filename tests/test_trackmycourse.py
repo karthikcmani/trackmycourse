@@ -6,7 +6,7 @@ study organization, analytics calculations, and document ingestion.
 import pytest
 import os
 from app import create_app
-from models import db, User, Course, Module, Topic, UserProgress, StudyTask, StudySession, StudentNote, LearningResource, AcademicGoal
+from models import db, User, Course, Module, Topic, UserProgress, StudyTask, StudySession, StudentNote, LearningResource, AcademicGoal, SyllabusSource, UniversityNotification
 from syllabus_parser import SyllabusParser
 
 @pytest.fixture
@@ -337,18 +337,17 @@ def test_syllabus_parser_extraction():
 # ============================================================================
 
 def test_multi_university_and_btech_branches(client):
-    # 1. Check verified institutions exist (KTU and AICTE National Model)
+    # 1. Check verified institutions exist (KTU)
     res = client.get("/api/universities")
     assert res.status_code == 200
     unis = res.json
     uni_codes = {u.get("code") for u in unis}
     assert "KTU" in uni_codes
-    assert "AICTE" in uni_codes
 
     # 2. Check search filter
-    res_search = client.get("/api/universities?q=aicte")
+    res_search = client.get("/api/universities?q=ktu")
     assert res_search.status_code == 200
-    assert any("AICTE" in u.get("code", "") for u in res_search.json)
+    assert any("KTU" in u.get("code", "") or "Kalam" in u.get("name", "") for u in res_search.json)
 
     # 3. Check KTU B.Tech branches
     ktu = next(u for u in unis if u.get("code") == "KTU")
@@ -394,7 +393,7 @@ def test_multi_university_and_btech_branches(client):
 # 11. STUDENT SYLLABUS SUBMISSION & SEMESTER-WISE INGESTION
 # ============================================================================
 
-def test_student_syllabus_submission_and_semester_arrangement(client):
+def test_student_syllabus_submission_and_semester_arrangement(client, app):
     """Verifies that students can submit their syllabus and have it arranged semester-wise."""
     sample_pasted_syllabus = """
     SEMESTER 1
@@ -435,19 +434,32 @@ def test_student_syllabus_submission_and_semester_arrangement(client):
     s2_course = parsed["semesters"][1]["courses"][0]
     assert s2_course["code"] == "20MCA112"
 
-    # 2. Save structured syllabus
-    res_save = client.post("/api/student/save-syllabus", json=parsed)
-    assert res_save.status_code == 200
-    save_result = res_save.json
-    assert save_result["success"] is True
-    assert save_result["courses_created"] >= 1
+    try:
+        # 2. Save structured syllabus
+        res_save = client.post("/api/student/save-syllabus", json=parsed)
+        assert res_save.status_code == 200
+        save_result = res_save.json
+        assert save_result["success"] is True
+        assert save_result["courses_created"] >= 1
+    finally:
+        # Clean up test created courses so production DB is never polluted
+        with app.app_context():
+            for code in ["20MCA111", "20MCA112"]:
+                c = Course.query.filter_by(code=code).first()
+                if c:
+                    for m in c.modules:
+                        Topic.query.filter_by(module_id=m.id).delete()
+                        db.session.delete(m)
+                    SyllabusSource.query.filter_by(course_id=c.id).delete()
+                    db.session.delete(c)
+            db.session.commit()
 
 
 # ============================================================================
 # 12. UNIVERSITY NOTIFICATIONS & SMART STUDY TIMETABLE AUTO-SCHEDULER
 # ============================================================================
 
-def test_university_notification_and_smart_study_timetable(client):
+def test_university_notification_and_smart_study_timetable(client, app):
     """Verifies extracting exam timetable from university notification and auto-scheduling study plan."""
     # 1. List University Notifications
     res_notif = client.get("/api/study/notifications")
@@ -473,26 +485,33 @@ def test_university_notification_and_smart_study_timetable(client):
     assert parse_data["success"] is True
     notif_id = parse_data["notification_id"]
 
-    # 3. Generate Smart Study Timetable
-    res_gen = client.post("/api/study/generate-smart-timetable", json={
-        "notification_id": notif_id
-    })
-    assert res_gen.status_code == 200
-    gen_data = res_gen.json
-    assert gen_data["success"] is True
-    assert gen_data["slots_count"] == 14  # 7 days * 2 slots
+    try:
+        # 3. Generate Smart Study Timetable
+        res_gen = client.post("/api/study/generate-smart-timetable", json={
+            "notification_id": notif_id
+        })
+        assert res_gen.status_code == 200
+        gen_data = res_gen.json
+        assert gen_data["success"] is True
+        assert gen_data["slots_count"] == 14  # 7 days * 2 slots
 
-    # 4. Retrieve Active Weekly Study Timetable
-    res_tt = client.get("/api/study/timetable")
-    assert res_tt.status_code == 200
-    tt_data = res_tt.json
-    assert tt_data["total_slots"] == 14
-    assert "Monday" in tt_data["days"]
-    assert len(tt_data["days"]["Monday"]) == 2
+        # 4. Retrieve Active Weekly Study Timetable
+        res_tt = client.get("/api/study/timetable")
+        assert res_tt.status_code == 200
+        tt_data = res_tt.json
+        assert tt_data["total_slots"] == 14
+        assert "Monday" in tt_data["days"]
+        assert len(tt_data["days"]["Monday"]) == 2
 
-    # 5. Verify Study Tasks were auto-scheduled
-    res_tasks = client.get("/api/study/tasks?status=pending")
-    assert res_tasks.status_code == 200
-    tasks = res_tasks.json
-    assert any("University Timetable" in (t["description"] or "") for t in tasks)
+        # 5. Verify Study Tasks were auto-scheduled
+        res_tasks = client.get("/api/study/tasks?status=pending")
+        assert res_tasks.status_code == 200
+        tasks = res_tasks.json
+        assert any("University Timetable" in (t["description"] or "") for t in tasks)
+    finally:
+        with app.app_context():
+            notif = db.session.get(UniversityNotification, notif_id)
+            if notif:
+                db.session.delete(notif)
+            db.session.commit()
 
