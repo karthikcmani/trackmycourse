@@ -3,7 +3,7 @@ TrackMyCourse — Core Academic & Progress API Blueprint
 Preserves existing API contracts while securing multi-user isolation,
 eliminating data leaks, and adding detailed course summaries and live university search.
 """
-from flask import Blueprint, request, jsonify
+from flask import Blueprint, request, jsonify, send_from_directory, abort
 from flask_login import current_user
 import os
 from werkzeug.utils import secure_filename
@@ -168,10 +168,127 @@ def get_courses():
             "name": c.name,
             "code": c.code or "",
             "credits": c.credits or 4,
-            "course_type": c.course_type or "Theory"
+            "course_type": c.course_type or "Theory",
+            "drive_url": c.drive_url or ("https://drive.google.com/drive/folders/1d-bjA0vt65UWnMpIMC4u26_gyewsxMOz" if c.code == "20MCA201" else "")
         }
         for c in courses
     ])
+
+
+def find_course_local_folder(course_code):
+    """Locate local course folder in D:\\MCA2025-27 by course code if available."""
+    if not course_code:
+        return None
+    base_dir = r"D:\MCA2025-27"
+    if not os.path.exists(base_dir):
+        return None
+    import glob
+    matches = glob.glob(os.path.join(base_dir, "Semester-*", f"*{course_code}*"))
+    if matches and os.path.isdir(matches[0]):
+        return matches[0]
+    return None
+
+
+@api.route("/course-files/<int:course_id>")
+def get_course_files(course_id):
+    course = Course.query.get(course_id)
+    if not course:
+        return jsonify({"error": "Course not found"}), 404
+
+    subpath = request.args.get("subpath", "").strip().lstrip("/\\")
+    drive_url = course.drive_url or ""
+    if course.code == "20MCA201" and not drive_url:
+        drive_url = "https://drive.google.com/drive/folders/1d-bjA0vt65UWnMpIMC4u26_gyewsxMOz"
+
+    root_folder = find_course_local_folder(course.code)
+    
+    response_data = {
+        "course_id": course.id,
+        "course_code": course.code or "",
+        "course_name": course.name,
+        "drive_url": drive_url,
+        "has_local_folder": bool(root_folder),
+        "folder_name": os.path.basename(root_folder) if root_folder else "",
+        "current_subpath": subpath,
+        "items": []
+    }
+
+    if not root_folder:
+        return jsonify(response_data)
+
+    target_dir = os.path.normpath(os.path.join(root_folder, subpath))
+    # Security check: prevent directory traversal outside root_folder
+    if not target_dir.startswith(os.path.normpath(root_folder)) or not os.path.isdir(target_dir):
+        return jsonify(response_data)
+
+    items = []
+    try:
+        entries = sorted(os.listdir(target_dir))
+        for name in entries:
+            # Skip hidden / lock / build files
+            if name.startswith((".", "~$", "__")) or name.endswith((".ini", ".tmp")):
+                continue
+            full_path = os.path.join(target_dir, name)
+            rel_path = "/".join(filter(None, [subpath, name])).replace("\\", "/")
+            
+            if os.path.isdir(full_path):
+                try:
+                    sub_count = len([x for x in os.listdir(full_path) if not x.startswith(".")])
+                except Exception:
+                    sub_count = 0
+                items.append({
+                    "name": name,
+                    "type": "folder",
+                    "path": rel_path,
+                    "item_count": sub_count
+                })
+            else:
+                ext = name.rsplit(".", 1)[-1].lower() if "." in name else ""
+                size_bytes = os.path.getsize(full_path)
+                size_str = f"{size_bytes / 1024:.1f} KB" if size_bytes < 1024 * 1024 else f"{size_bytes / (1024*1024):.1f} MB"
+                items.append({
+                    "name": name,
+                    "type": "file",
+                    "path": rel_path,
+                    "size": size_str,
+                    "ext": ext
+                })
+    except Exception:
+        pass
+
+    response_data["items"] = items
+    return jsonify(response_data)
+
+
+@api.route("/open-file/<int:course_id>/<path:filepath>")
+def open_course_file(course_id, filepath):
+    course = Course.query.get(course_id)
+    if not course:
+        abort(404)
+    root_folder = find_course_local_folder(course.code)
+    if not root_folder:
+        abort(404)
+    safe_filepath = filepath.replace("\\", "/")
+    full_path = os.path.normpath(os.path.join(root_folder, safe_filepath))
+    if not full_path.startswith(os.path.normpath(root_folder)) or not os.path.isfile(full_path):
+        abort(404)
+    return send_from_directory(root_folder, safe_filepath, as_attachment=False)
+
+
+@api.route("/course-drive-url/<int:course_id>", methods=["POST"])
+def update_course_drive_url(course_id):
+    course = Course.query.get(course_id)
+    if not course:
+        return jsonify({"error": "Course not found"}), 404
+    data = request.get_json() or {}
+    drive_url = data.get("drive_url", "").strip()
+    course.drive_url = drive_url
+    db.session.commit()
+    return jsonify({
+        "success": True,
+        "course_id": course.id,
+        "drive_url": course.drive_url
+    })
 
 
 @api.route("/syllabus")

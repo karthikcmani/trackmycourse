@@ -515,3 +515,46 @@ def test_university_notification_and_smart_study_timetable(client, app):
                 db.session.delete(notif)
             db.session.commit()
 
+
+# ============================================================================
+# 12. COURSE FOLDER PANEL & GOOGLE DRIVE INTEGRATION
+# ============================================================================
+
+def test_course_folder_panel_and_google_drive_integration(client, app):
+    """
+    Verify side folder panel loads authentic course files and connects to Google Drive.
+    Specifically tests Course 8 (20MCA201 - Data Science & Machine Learning).
+    """
+    # 1. Fetch Course 8 files and Google Drive link
+    res = client.get("/api/course-files/8")
+    assert res.status_code == 200
+    data = res.json
+    assert data["course_code"] == "20MCA201"
+    assert "https://drive.google.com/drive/folders/1d-bjA0vt65UWnMpIMC4u26_gyewsxMOz" in data["drive_url"]
+    assert data["has_local_folder"] is True
+
+    # 2. Check root folder items
+    item_names = [it["name"] for it in data["items"]]
+    assert "PYQ" in item_names
+    assert "StudyNotes" in item_names
+    assert "TutorialsAndAssignments" in item_names
+    assert "Syllabus.pdf" in item_names
+
+    # 3. Check subpath navigation (StudyNotes)
+    res_sub = client.get("/api/course-files/8?subpath=StudyNotes")
+    assert res_sub.status_code == 200
+    sub_items = [it["name"] for it in res_sub.json["items"]]
+    assert "DS_ML_tutorial_notes.pdf" in sub_items
+
+    # 4. Open course PDF file
+    res_open = client.get("/api/open-file/8/StudyNotes/DS_ML_tutorial_notes.pdf")
+    assert res_open.status_code == 200
+    assert "application/pdf" in res_open.headers.get("Content-Type", "")
+
+    # 5. Test updating Drive URL
+    res_up = client.post("/api/course-drive-url/8", json={
+        "drive_url": "https://drive.google.com/drive/folders/1d-bjA0vt65UWnMpIMC4u26_gyewsxMOz"
+    })
+    assert res_up.status_code == 200
+    assert res_up.json["success"] is True
+

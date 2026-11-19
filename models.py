@@ -144,6 +144,7 @@ class Course(db.Model):
     semester_id = db.Column(db.Integer, db.ForeignKey("semester.id"), nullable=False)
     is_elective = db.Column(db.Boolean, default=False)
     course_type = db.Column(db.String(50), default="Theory")
+    drive_url = db.Column(db.String(500), nullable=True)
 
     modules = db.relationship("Module", backref="course", lazy=True, cascade="all, delete-orphan")
     notes = db.relationship("StudentNote", backref="course", lazy=True)

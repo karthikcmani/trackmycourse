@@ -271,6 +271,200 @@
         display: block;
         margin-bottom: 12px;
     }
+
+    /* ===== WORKSPACE LAYOUT & SIDE FOLDER PANEL (PERSONAL-MODE REFINED) ===== */
+    .course-workspace-layout {
+        display: grid;
+        grid-template-columns: 340px 1fr;
+        gap: 24px;
+        align-items: flex-start;
+        margin-top: 15px;
+        transition: var(--transition);
+    }
+
+    .course-workspace-layout.sidebar-collapsed {
+        grid-template-columns: 1fr;
+    }
+
+    .course-folder-sidebar {
+        background: white;
+        border-radius: var(--border-radius);
+        padding: 20px;
+        box-shadow: var(--shadow);
+        border: 1px solid rgba(0, 0, 0, 0.06);
+        position: sticky;
+        top: 85px;
+        max-height: calc(100vh - 110px);
+        overflow-y: auto;
+        display: flex;
+        flex-direction: column;
+    }
+
+    .drive-banner {
+        background: linear-gradient(135deg, rgba(67, 97, 238, 0.08) 0%, rgba(76, 201, 240, 0.12) 100%);
+        border: 1px solid rgba(67, 97, 238, 0.2);
+        border-radius: 10px;
+        padding: 10px 12px;
+        margin-bottom: 14px;
+    }
+
+    .btn-drive-primary {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        background: var(--primary);
+        color: white;
+        padding: 6px 12px;
+        border-radius: 6px;
+        font-size: 0.82rem;
+        font-weight: 600;
+        text-decoration: none;
+        transition: var(--transition);
+    }
+
+    .btn-drive-primary:hover {
+        background: var(--primary-dark);
+        color: white;
+        transform: translateY(-1px);
+    }
+
+    .btn-drive-secondary {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        background: white;
+        border: 1px solid rgba(67, 97, 238, 0.3);
+        color: var(--primary);
+        padding: 5px 10px;
+        border-radius: 6px;
+        font-size: 0.8rem;
+        font-weight: 600;
+        cursor: pointer;
+        transition: var(--transition);
+    }
+
+    .btn-drive-secondary:hover {
+        background: rgba(67, 97, 238, 0.06);
+    }
+
+    .btn-drive-icon {
+        background: none;
+        border: none;
+        font-size: 0.9rem;
+        cursor: pointer;
+        padding: 4px;
+        border-radius: 4px;
+        color: var(--gray);
+        transition: var(--transition);
+    }
+
+    .btn-drive-icon:hover {
+        background: rgba(0, 0, 0, 0.05);
+        color: var(--dark);
+    }
+
+    /* Course File List */
+    .course-file-list {
+        list-style: none;
+        padding: 0;
+        margin: 0;
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+    }
+
+    .course-file-list li {
+        padding: 11px 13px;
+        border-radius: 8px;
+        cursor: pointer;
+        transition: var(--transition);
+        border: 1px solid transparent;
+        background: var(--light);
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        position: relative;
+        overflow: hidden;
+        font-size: 0.88rem;
+    }
+
+    .course-file-list li::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 3px;
+        height: 100%;
+        background: var(--primary);
+        transform: scaleY(0);
+        transition: transform 0.25s ease;
+    }
+
+    .course-file-list li:hover {
+        background: rgba(67, 97, 238, 0.07);
+        transform: translateX(3px);
+        border-color: rgba(67, 97, 238, 0.18);
+        box-shadow: 0 2px 8px rgba(67, 97, 238, 0.08);
+    }
+
+    .course-file-list li:hover::before {
+        transform: scaleY(1);
+    }
+
+    .course-file-list li.back-btn {
+        background: rgba(67, 97, 238, 0.06);
+        border: 1px dashed rgba(67, 97, 238, 0.35);
+        font-weight: 700;
+        color: var(--primary);
+    }
+
+    .course-file-list li.back-btn:hover {
+        background: rgba(67, 97, 238, 0.12);
+    }
+
+    .course-file-list li .item-name {
+        flex: 1;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        color: var(--dark);
+    }
+
+    .course-file-list li .item-badge {
+        font-size: 0.72rem;
+        background: rgba(0, 0, 0, 0.05);
+        color: var(--gray);
+        padding: 2px 7px;
+        border-radius: 10px;
+        flex-shrink: 0;
+    }
+
+    .course-file-list li.empty-folder {
+        background: none;
+        border: 1px dashed var(--light-gray);
+        color: var(--gray);
+        cursor: default;
+        justify-content: center;
+        text-align: center;
+        padding: 20px 10px;
+    }
+
+    .course-file-list li.empty-folder:hover {
+        background: none;
+        transform: none;
+        border-color: var(--light-gray);
+        box-shadow: none;
+    }
+
+    @media (max-width: 992px) {
+        .course-workspace-layout {
+            grid-template-columns: 1fr;
+        }
+        .course-folder-sidebar {
+            position: static;
+            max-height: none;
+        }
+    }
 </style>
 {% endblock %}
 
@@ -422,6 +616,9 @@ Module 1: Relational Architecture (8 Hours)
             <span class="badge-pill" id="currentCourseCode">CORE</span>
             <span class="badge-pill" id="currentCourseCredits">4 Credits</span>
             <span id="currentCourseType">Theory Course</span>
+            <button type="button" id="toggleSidebarBtn" class="btn btn-secondary btn-sm" style="margin-left: 8px; padding: 4px 10px; font-size: 0.8rem; display: inline-flex; align-items: center; gap: 5px;">
+                📁 <span id="toggleSidebarText">Hide Files Panel</span>
+            </button>
         </div>
     </div>
 
@@ -434,12 +631,87 @@ Module 1: Relational Architecture (8 Hours)
     </div>
 </div>
 
-<!-- SYLLABUS MODULES & TOPICS CONTAINER -->
-<div id="syllabus">
-    <div class="empty-syllabus-state" id="initialPrompt">
-        <span>📖</span>
-        <h3>Select a Course to View Syllabus</h3>
-        <p>Use the dropdowns above to explore your university curriculum and record your academic progress.</p>
+<!-- COURSE WORKSPACE LAYOUT (SIDEBAR + SYLLABUS) -->
+<div class="course-workspace-layout" id="courseWorkspace">
+    <!-- LEFT SIDEBAR: COURSE FOLDER & GOOGLE DRIVE PANEL (PERSONAL-MODE REPRODUCED) -->
+    <aside id="sidebar" class="course-folder-sidebar" style="display: none;">
+        <div class="sidebar-header">
+            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px;">
+                <h3 style="margin: 0; font-size: 1.15rem; font-weight: 700; color: var(--dark); display: flex; align-items: center; gap: 8px;">
+                    📁 Course Materials
+                </h3>
+                <span id="sidebarCourseBadge" class="badge-pill" style="font-size: 0.75rem;">COURSE</span>
+            </div>
+            
+            <!-- Google Drive Action Section -->
+            <div id="driveSection" class="drive-banner" style="display: none;">
+                <div style="display: flex; align-items: center; justify-content: space-between; gap: 8px; flex-wrap: wrap;">
+                    <a id="driveOpenLink" href="#" target="_blank" class="btn-drive-primary">
+                        <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor"><path d="M19.35 10.04C18.67 6.59 15.64 4 12 4 9.11 4 6.6 5.64 5.35 8.04 2.34 8.36 0 10.91 0 14c0 3.31 2.69 6 6 6h13c2.76 0 5-2.24 5-5 0-2.64-2.05-4.78-4.65-4.96zM19 18H6c-2.21 0-4-1.79-4-4 0-2.05 1.53-3.76 3.56-3.97l1.07-.11.5-.95C8.08 7.14 9.94 6 12 6c2.62 0 4.88 1.86 5.39 4.43l.3 1.5 1.53.11c1.56.1 2.78 1.41 2.78 2.96 0 1.65-1.35 3-3 3z"/></svg>
+                        <span>Google Drive Folder ↗</span>
+                    </a>
+                    <button type="button" id="btnPreviewDrive" class="btn-drive-secondary" title="View In-App Drive Folder">
+                        👁️ Embed
+                    </button>
+                    <button type="button" id="btnEditDriveUrl" class="btn-drive-icon" title="Edit Google Drive Link">
+                        ✏️
+                    </button>
+                </div>
+            </div>
+
+            <!-- Breadcrumb Navigation -->
+            <div id="folderBreadcrumb" style="display: none; margin: 6px 0 10px; font-size: 0.82rem; color: var(--gray);">
+                <span id="breadcrumbPath"></span>
+            </div>
+        </div>
+
+        <!-- File List -->
+        <ul id="fileList" class="course-file-list">
+            <li class="empty-folder">Loading materials...</li>
+        </ul>
+
+        <!-- Footer / Quick Link -->
+        <div class="sidebar-footer" style="margin-top: 15px; padding-top: 12px; border-top: 1px dashed var(--light-gray); font-size: 0.8rem; color: var(--gray); display: flex; justify-content: space-between; align-items: center;">
+            <span id="folderStats">0 items</span>
+            <button type="button" id="btnConnectDriveFooter" style="background: none; border: none; color: var(--primary); font-size: 0.8rem; cursor: pointer; text-decoration: underline;">
+                🔗 Connect Drive
+            </button>
+        </div>
+    </aside>
+
+    <!-- RIGHT: SYLLABUS MODULES & TOPICS CONTAINER -->
+    <main class="syllabus-main-content">
+        <div id="syllabus">
+            <div class="empty-syllabus-state" id="initialPrompt">
+                <span>📖</span>
+                <h3>Select a Course to View Syllabus</h3>
+                <p>Use the dropdowns above to explore your university curriculum and record your academic progress.</p>
+            </div>
+        </div>
+    </main>
+</div>
+
+<!-- IN-APP DOCUMENT & DRIVE VIEWER MODAL -->
+<div id="fileViewerModal" class="modal-backdrop" style="display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.65); z-index: 10000; align-items: center; justify-content: center; padding: 20px;">
+    <div style="background: white; border-radius: 14px; width: 95%; max-width: 1100px; height: 90vh; display: flex; flex-direction: column; overflow: hidden; box-shadow: 0 15px 45px rgba(0,0,0,0.35);">
+        <div style="padding: 14px 20px; background: #fdfdfd; border-bottom: 1px solid var(--light-gray); display: flex; justify-content: space-between; align-items: center;">
+            <div style="display: flex; align-items: center; gap: 10px; overflow: hidden;">
+                <span id="modalDocIcon" style="font-size: 1.4rem;">📄</span>
+                <div>
+                    <h4 id="modalDocTitle" style="margin: 0; font-size: 1.05rem; color: var(--dark); white-space: nowrap; text-overflow: ellipsis; overflow: hidden;">Document Viewer</h4>
+                    <span id="modalDocSubtitle" style="font-size: 0.8rem; color: var(--gray);">Course Materials</span>
+                </div>
+            </div>
+            <div style="display: flex; align-items: center; gap: 10px;">
+                <a id="modalDocExternalLink" href="#" target="_blank" class="btn btn-secondary btn-sm" style="display: inline-flex; align-items: center; gap: 5px;">
+                    🔗 Open in Tab ↗
+                </a>
+                <button type="button" id="closeFileViewerBtn" style="background: none; border: none; font-size: 1.8rem; line-height: 1; cursor: pointer; color: var(--gray);">&times;</button>
+            </div>
+        </div>
+        <div style="flex: 1; background: #525659; position: relative;">
+            <iframe id="fileViewer" src="" style="width: 100%; height: 100%; border: none;"></iframe>
+        </div>
     </div>
 </div>
 {% endblock %}
@@ -625,6 +897,9 @@ document.addEventListener("DOMContentLoaded", () => {
         document.getElementById("currentCourseType").innerText = courseType;
         courseBanner.style.display = "flex";
 
+        // Load Course Folder & Google Drive Materials in Side Panel (Personal-Mode Style)
+        loadCourseFiles(courseId);
+
         syllabusDiv.innerHTML = '<div style="text-align:center;padding:40px;"><p>Loading official curriculum topics...</p></div>';
 
         fetch(`/api/syllabus?course_id=${courseId}`)
@@ -760,6 +1035,8 @@ document.addEventListener("DOMContentLoaded", () => {
         if (["program", "stream", "scheme", "semester", "course"].includes(level)) {
             course.innerHTML = '<option value="">Select Course</option>';
             courseBanner.style.display = "none";
+            const sb = document.getElementById("sidebar");
+            if (sb) sb.style.display = "none";
             syllabusDiv.innerHTML = `
                 <div class="empty-syllabus-state">
                     <span>📖</span>
@@ -956,6 +1233,233 @@ document.addEventListener("DOMContentLoaded", () => {
             confirmBtn.innerText = "🚀 Confirm & Add to My Course Tracker";
         }
     };
+
+    // ===== COURSE FILES SIDEBAR & GOOGLE DRIVE INTEGRATION (PERSONAL-MODE REPRODUCED) =====
+    let currentCourseFilesId = null;
+    let currentCourseSubpath = "";
+    let currentDriveUrl = "";
+
+    const sidebar = document.getElementById("sidebar");
+    const courseWorkspace = document.getElementById("courseWorkspace");
+    const toggleSidebarBtn = document.getElementById("toggleSidebarBtn");
+    const toggleSidebarText = document.getElementById("toggleSidebarText");
+
+    if (toggleSidebarBtn) {
+        toggleSidebarBtn.onclick = () => {
+            if (!sidebar) return;
+            const isHidden = sidebar.style.display === "none";
+            if (isHidden) {
+                sidebar.style.display = "flex";
+                courseWorkspace.classList.remove("sidebar-collapsed");
+                toggleSidebarText.innerText = "Hide Files Panel";
+            } else {
+                sidebar.style.display = "none";
+                courseWorkspace.classList.add("sidebar-collapsed");
+                toggleSidebarText.innerText = "Show Files Panel";
+            }
+        };
+    }
+
+    window.loadCourseFiles = (courseId, subpath = "") => {
+        currentCourseFilesId = courseId;
+        currentCourseSubpath = subpath;
+
+        const fileList = document.getElementById("fileList");
+        const driveSection = document.getElementById("driveSection");
+        const driveOpenLink = document.getElementById("driveOpenLink");
+        const folderBreadcrumb = document.getElementById("folderBreadcrumb");
+        const breadcrumbPath = document.getElementById("breadcrumbPath");
+        const folderStats = document.getElementById("folderStats");
+
+        if (!sidebar) return;
+        sidebar.style.display = "flex";
+        courseWorkspace.classList.remove("sidebar-collapsed");
+        if (toggleSidebarText) toggleSidebarText.innerText = "Hide Files Panel";
+
+        fileList.innerHTML = '<li class="empty-folder">Loading folder files...</li>';
+
+        fetch(`/api/course-files/${courseId}?subpath=${encodeURIComponent(subpath)}`)
+            .then(res => res.json())
+            .then(data => {
+                currentDriveUrl = data.drive_url || "";
+                const badge = document.getElementById("sidebarCourseBadge");
+                if (badge) badge.innerText = data.course_code || "COURSE";
+
+                // Google Drive banner section
+                if (data.drive_url) {
+                    driveSection.style.display = "block";
+                    driveOpenLink.href = data.drive_url;
+                } else {
+                    driveSection.style.display = "none";
+                }
+
+                // Subpath breadcrumbs
+                if (subpath) {
+                    folderBreadcrumb.style.display = "block";
+                    breadcrumbPath.innerText = `📂 / ${subpath}`;
+                } else {
+                    folderBreadcrumb.style.display = "none";
+                }
+
+                fileList.innerHTML = "";
+
+                // Back button if in a subpath (personal-mode style)
+                if (subpath) {
+                    const backLi = document.createElement("li");
+                    backLi.className = "back-btn";
+                    const parts = subpath.split("/").filter(Boolean);
+                    parts.pop();
+                    const parentSubpath = parts.join("/");
+                    backLi.innerHTML = `<span>⬅</span> <span class="item-name">Back to ${parentSubpath ? parts[parts.length - 1] : 'Root Folder'}</span>`;
+                    backLi.onclick = () => loadCourseFiles(courseId, parentSubpath);
+                    fileList.appendChild(backLi);
+                }
+
+                // Empty folder handling
+                if (!data.items || data.items.length === 0) {
+                    const emptyLi = document.createElement("li");
+                    emptyLi.className = "empty-folder";
+                    if (data.drive_url) {
+                        emptyLi.innerHTML = `
+                            <div>
+                                <p style="margin-bottom: 8px;">No local subfolder contents.</p>
+                                <a href="${data.drive_url}" target="_blank" class="btn btn-primary btn-sm" style="display: inline-flex; align-items: center; gap: 5px;">
+                                    Open Google Drive Folder ↗
+                                </a>
+                            </div>
+                        `;
+                    } else {
+                        emptyLi.innerHTML = `
+                            <div>
+                                <p style="margin-bottom: 6px;">📭 No local files found.</p>
+                                <button type="button" onclick="promptDriveUrl()" class="btn btn-secondary btn-sm">
+                                    + Connect Google Drive
+                                </button>
+                            </div>
+                        `;
+                    }
+                    fileList.appendChild(emptyLi);
+                    if (folderStats) folderStats.innerText = "0 items";
+                    return;
+                }
+
+                // Render folders and files
+                let fileCount = 0;
+                data.items.forEach(item => {
+                    const li = document.createElement("li");
+                    if (item.type === "folder") {
+                        li.innerHTML = `
+                            <span style="font-size: 1.2rem;">📁</span>
+                            <span class="item-name" title="${item.name}">${item.name}</span>
+                            <span class="item-badge">${item.item_count || 0} items</span>
+                        `;
+                        li.onclick = () => loadCourseFiles(courseId, item.path);
+                    } else {
+                        fileCount++;
+                        const docIcon = item.ext === 'pdf' ? '📕' : (['doc', 'docx'].includes(item.ext) ? '📘' : (['ppt', 'pptx'].includes(item.ext) ? '📙' : '📄'));
+                        li.innerHTML = `
+                            <span style="font-size: 1.2rem;">${docIcon}</span>
+                            <span class="item-name" title="${item.name}">${item.name}</span>
+                            <span class="item-badge">${item.size || ''}</span>
+                        `;
+                        li.onclick = () => openCourseFile(courseId, item.path, item.name);
+                    }
+                    fileList.appendChild(li);
+                });
+
+                if (folderStats) folderStats.innerText = `${data.items.length} items (${fileCount} files)`;
+            })
+            .catch(err => {
+                console.error("Error loading course files:", err);
+                fileList.innerHTML = '<li class="empty-folder">Unable to load course files.</li>';
+            });
+    };
+
+    window.openCourseFile = (courseId, filepath, filename) => {
+        const modal = document.getElementById("fileViewerModal");
+        const iframe = document.getElementById("fileViewer");
+        const title = document.getElementById("modalDocTitle");
+        const subtitle = document.getElementById("modalDocSubtitle");
+        const extLink = document.getElementById("modalDocExternalLink");
+
+        const fileUrl = `/api/open-file/${courseId}/${encodeURIComponent(filepath)}`;
+        iframe.src = fileUrl;
+        title.innerText = filename;
+        subtitle.innerText = filepath;
+        extLink.href = fileUrl;
+
+        modal.style.display = "flex";
+    };
+
+    window.closeFileViewerModal = () => {
+        const modal = document.getElementById("fileViewerModal");
+        const iframe = document.getElementById("fileViewer");
+        iframe.src = "";
+        modal.style.display = "none";
+    };
+
+    const closeViewerBtn = document.getElementById("closeFileViewerBtn");
+    if (closeViewerBtn) {
+        closeViewerBtn.onclick = closeFileViewerModal;
+    }
+
+    window.previewDriveFolder = () => {
+        if (!currentDriveUrl) return;
+        const modal = document.getElementById("fileViewerModal");
+        const iframe = document.getElementById("fileViewer");
+        const title = document.getElementById("modalDocTitle");
+        const subtitle = document.getElementById("modalDocSubtitle");
+        const extLink = document.getElementById("modalDocExternalLink");
+
+        let embedUrl = currentDriveUrl;
+        const match = currentDriveUrl.match(/folders\/([a-zA-Z0-9_\-]+)/);
+        if (match) {
+            embedUrl = `https://drive.google.com/embeddedfolderview?id=${match[1]}#list`;
+        }
+
+        iframe.src = embedUrl;
+        title.innerText = "Google Drive Folder Viewer";
+        subtitle.innerText = currentDriveUrl;
+        extLink.href = currentDriveUrl;
+
+        modal.style.display = "flex";
+    };
+
+    window.promptDriveUrl = () => {
+        if (!currentCourseFilesId) {
+            alert("Please select a course first.");
+            return;
+        }
+        const newUrl = prompt("Enter or paste the Google Drive folder URL for this course:", currentDriveUrl || "https://drive.google.com/drive/folders/...");
+        if (newUrl !== null && newUrl.trim()) {
+            fetch(`/api/course-drive-url/${currentCourseFilesId}`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ drive_url: newUrl.trim() })
+            })
+            .then(res => res.json())
+            .then(data => {
+                if (data.success) {
+                    currentDriveUrl = data.drive_url;
+                    loadCourseFiles(currentCourseFilesId, currentCourseSubpath);
+                }
+            })
+            .catch(err => alert("Error updating Drive URL: " + err.message));
+        }
+    };
+
+    const btnConnectDriveFooter = document.getElementById("btnConnectDriveFooter");
+    if (btnConnectDriveFooter) {
+        btnConnectDriveFooter.onclick = promptDriveUrl;
+    }
+    const btnPreviewDrive = document.getElementById("btnPreviewDrive");
+    if (btnPreviewDrive) {
+        btnPreviewDrive.onclick = previewDriveFolder;
+    }
+    const btnEditDriveUrl = document.getElementById("btnEditDriveUrl");
+    if (btnEditDriveUrl) {
+        btnEditDriveUrl.onclick = promptDriveUrl;
+    }
 });
 </script>
 {% endblock %}
