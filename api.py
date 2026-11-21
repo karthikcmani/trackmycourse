@@ -305,7 +305,7 @@ def get_syllabus():
 
     data = []
     for m in modules:
-        topics_sorted = sorted(m.topics, key=lambda t: t.topic_no if t.topic_no is not None else t.id)
+        topics_sorted = sorted(m.topics, key=lambda t: (t.topic_no if t.topic_no is not None else 999999, t.id))
         data.append({
             "id": m.id,
             "module": m.name,
@@ -318,6 +318,91 @@ def get_syllabus():
         })
 
     return jsonify(data)
+
+
+# ============================================================================
+# TOPIC CUSTOMIZATION & EDITING (STUDENT PERSONALIZATION)
+# ============================================================================
+
+@api.route("/topics/<int:topic_id>", methods=["PUT", "PATCH"])
+def update_topic(topic_id):
+    topic = db.session.get(Topic, topic_id) if hasattr(db.session, "get") else Topic.query.get(topic_id)
+    if not topic:
+        return jsonify({"error": "Topic not found"}), 404
+    data = request.get_json() or {}
+    new_name = data.get("name", "").strip()
+    if not new_name:
+        return jsonify({"error": "Topic name cannot be empty"}), 400
+    topic.name = new_name
+    db.session.commit()
+    return jsonify({
+        "success": True,
+        "topic": {
+            "id": topic.id,
+            "name": topic.name,
+            "topic_no": topic.topic_no,
+            "module_id": topic.module_id
+        }
+    })
+
+
+@api.route("/topics", methods=["POST"])
+def create_topic():
+    data = request.get_json() or {}
+    module_id = data.get("module_id")
+    name = data.get("name", "").strip()
+    after_topic_id = data.get("after_topic_id")
+
+    if not module_id or not name:
+        return jsonify({"error": "module_id and name are required"}), 400
+
+    module = db.session.get(Module, module_id) if hasattr(db.session, "get") else Module.query.get(module_id)
+    if not module:
+        return jsonify({"error": "Module not found"}), 404
+
+    # Fetch current topics in sorted order
+    current_topics = sorted(module.topics, key=lambda t: (t.topic_no if t.topic_no is not None else 999999, t.id))
+
+    new_topic = Topic(module_id=module.id, name=name)
+    db.session.add(new_topic)
+    db.session.flush()
+
+    # Re-sequence with new_topic right after after_topic_id
+    reordered = []
+    inserted = False
+    for t in current_topics:
+        reordered.append(t)
+        if after_topic_id and t.id == int(after_topic_id):
+            reordered.append(new_topic)
+            inserted = True
+    if not inserted:
+        reordered.append(new_topic)
+
+    for idx, t in enumerate(reordered, 1):
+        t.topic_no = idx
+
+    db.session.commit()
+    return jsonify({
+        "success": True,
+        "topic": {
+            "id": new_topic.id,
+            "name": new_topic.name,
+            "topic_no": new_topic.topic_no,
+            "module_id": module.id
+        }
+    }), 201
+
+
+@api.route("/topics/<int:topic_id>", methods=["DELETE"])
+def delete_topic(topic_id):
+    topic = db.session.get(Topic, topic_id) if hasattr(db.session, "get") else Topic.query.get(topic_id)
+    if not topic:
+        return jsonify({"error": "Topic not found"}), 404
+
+    UserProgress.query.filter_by(topic_id=topic_id).delete()
+    db.session.delete(topic)
+    db.session.commit()
+    return jsonify({"success": True, "message": "Topic deleted successfully"})
 
 
 # ============================================================================

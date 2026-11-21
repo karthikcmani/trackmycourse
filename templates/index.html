@@ -274,19 +274,17 @@
 
     /* ===== WORKSPACE LAYOUT & SIDE FOLDER PANEL (PERSONAL-MODE REFINED) ===== */
     .course-workspace-layout {
-        display: grid;
-        grid-template-columns: 340px 1fr;
-        gap: 24px;
+        display: flex;
+        gap: 20px;
         align-items: flex-start;
         margin-top: 15px;
         transition: var(--transition);
-    }
-
-    .course-workspace-layout.sidebar-collapsed {
-        grid-template-columns: 1fr;
+        width: 100%;
     }
 
     .course-folder-sidebar {
+        width: 300px;
+        flex-shrink: 0;
         background: white;
         border-radius: var(--border-radius);
         padding: 20px;
@@ -298,6 +296,172 @@
         overflow-y: auto;
         display: flex;
         flex-direction: column;
+    }
+
+    /* INLINE FILE VIEWER (EXACTLY AS IN PERSONAL-MODE) */
+    .inline-file-viewer {
+        flex: 1.3;
+        min-width: 420px;
+        background: white;
+        border-radius: var(--border-radius);
+        box-shadow: var(--shadow);
+        border: 1px solid rgba(0, 0, 0, 0.08);
+        overflow: hidden;
+        display: flex;
+        flex-direction: column;
+        height: calc(100vh - 110px);
+        position: sticky;
+        top: 85px;
+        transition: var(--transition);
+    }
+
+    .inline-file-viewer.expanded {
+        flex: 2.8;
+    }
+
+    .viewer-header {
+        padding: 12px 18px;
+        background: #f8fafc;
+        border-bottom: 1px solid var(--light-gray);
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 10px;
+    }
+
+    .viewer-body {
+        flex: 1;
+        background: #525659;
+        position: relative;
+        height: 100%;
+    }
+
+    #fileViewer {
+        width: 100%;
+        height: 100%;
+        border: none;
+        display: block;
+    }
+
+    .syllabus-main-content {
+        flex: 1;
+        min-width: 320px;
+        transition: var(--transition);
+    }
+
+    /* Topic Item & Inline Editing / Bullet Actions */
+    .topic {
+        margin: 6px 0;
+        padding: 10px 14px;
+        border-radius: 8px;
+        display: flex;
+        align-items: center;
+        background: white;
+        border: 1px solid var(--light-gray);
+        transition: var(--transition);
+        position: relative;
+        gap: 10px;
+    }
+
+    .topic:hover {
+        border-color: rgba(67, 97, 238, 0.3);
+        background: #fbfdff;
+        transform: translateX(3px);
+    }
+
+    .topic-actions {
+        display: none;
+        align-items: center;
+        gap: 4px;
+        margin-left: auto;
+        flex-shrink: 0;
+    }
+
+    .topic:hover .topic-actions {
+        display: flex;
+    }
+
+    .btn-topic-action {
+        background: rgba(0, 0, 0, 0.04);
+        border: 1px solid rgba(0, 0, 0, 0.08);
+        border-radius: 6px;
+        cursor: pointer;
+        padding: 4px 7px;
+        font-size: 0.78rem;
+        line-height: 1;
+        transition: var(--transition);
+        color: var(--dark);
+    }
+
+    .btn-topic-action:hover {
+        background: rgba(67, 97, 238, 0.12);
+        color: var(--primary);
+        transform: scale(1.08);
+    }
+
+    .btn-topic-action.btn-topic-delete:hover {
+        background: rgba(220, 53, 69, 0.12);
+        color: var(--danger);
+    }
+
+    .topic-edit-input {
+        flex: 1;
+        padding: 6px 10px;
+        border-radius: 6px;
+        border: 1.5px solid var(--primary);
+        font-size: 0.92rem;
+        font-family: inherit;
+        outline: none;
+    }
+
+    .topic-add-box {
+        margin: 4px 0 10px 24px;
+        padding: 8px 12px;
+        background: #f0f4ff;
+        border: 1.5px dashed var(--primary-light);
+        border-radius: 8px;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        animation: fadeIn 0.25s ease;
+    }
+
+    .topic-add-input {
+        flex: 1;
+        padding: 6px 12px;
+        border-radius: 6px;
+        border: 1px solid rgba(67, 97, 238, 0.3);
+        font-size: 0.88rem;
+        font-family: inherit;
+        outline: none;
+        background: white;
+    }
+
+    .topic-add-input:focus {
+        border-color: var(--primary);
+        box-shadow: 0 0 0 3px rgba(67, 97, 238, 0.15);
+    }
+
+    .btn-xs {
+        padding: 4px 10px;
+        font-size: 0.78rem;
+        border-radius: 5px;
+    }
+
+    @media (max-width: 1100px) {
+        .course-workspace-layout {
+            flex-direction: column;
+        }
+        .course-folder-sidebar, .inline-file-viewer, .syllabus-main-content {
+            width: 100%;
+            min-width: 100%;
+            position: static;
+            height: auto;
+            max-height: none;
+        }
+        .inline-file-viewer {
+            height: 520px;
+        }
     }
 
     .drive-banner {
@@ -631,7 +795,7 @@ Module 1: Relational Architecture (8 Hours)
     </div>
 </div>
 
-<!-- COURSE WORKSPACE LAYOUT (SIDEBAR + SYLLABUS) -->
+<!-- COURSE WORKSPACE LAYOUT (SIDEBAR + INLINE VIEWER + SYLLABUS — PERSONAL-MODE ALIGNED) -->
 <div class="course-workspace-layout" id="courseWorkspace">
     <!-- LEFT SIDEBAR: COURSE FOLDER & GOOGLE DRIVE PANEL (PERSONAL-MODE REPRODUCED) -->
     <aside id="sidebar" class="course-folder-sidebar" style="display: none;">
@@ -679,6 +843,33 @@ Module 1: Relational Architecture (8 Hours)
         </div>
     </aside>
 
+    <!-- MIDDLE: INLINE DOCUMENT & DRIVE VIEWER (EXACTLY AS IN PERSONAL-MODE) -->
+    <div id="viewer" class="inline-file-viewer" style="display: none;">
+        <div class="viewer-header">
+            <div style="display: flex; align-items: center; gap: 8px; overflow: hidden;">
+                <span id="modalDocIcon" style="font-size: 1.25rem;">📄</span>
+                <div>
+                    <h4 id="modalDocTitle" style="margin: 0; font-size: 0.95rem; font-weight: 700; color: var(--dark); white-space: nowrap; text-overflow: ellipsis; overflow: hidden;">Document Viewer</h4>
+                    <span id="modalDocSubtitle" style="font-size: 0.76rem; color: var(--gray);">Course Materials</span>
+                </div>
+            </div>
+            <div style="display: flex; align-items: center; gap: 6px; flex-shrink: 0;">
+                <a id="modalDocExternalLink" href="#" target="_blank" class="btn btn-secondary btn-xs" title="Open in New Tab" style="display: inline-flex; align-items: center; gap: 4px;">
+                    🔗 Open Tab ↗
+                </a>
+                <button type="button" id="toggleExpandViewerBtn" onclick="toggleViewerExpand()" class="btn btn-secondary btn-xs" title="Expand / Standard Width">
+                    ⛶ Expand
+                </button>
+                <button type="button" id="closeFileViewerBtn" onclick="closeInlineViewer()" class="btn btn-secondary btn-xs" title="Close Viewer">
+                    ✕ Close
+                </button>
+            </div>
+        </div>
+        <div class="viewer-body">
+            <iframe id="fileViewer" src=""></iframe>
+        </div>
+    </div>
+
     <!-- RIGHT: SYLLABUS MODULES & TOPICS CONTAINER -->
     <main class="syllabus-main-content">
         <div id="syllabus">
@@ -689,30 +880,6 @@ Module 1: Relational Architecture (8 Hours)
             </div>
         </div>
     </main>
-</div>
-
-<!-- IN-APP DOCUMENT & DRIVE VIEWER MODAL -->
-<div id="fileViewerModal" class="modal-backdrop" style="display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.65); z-index: 10000; align-items: center; justify-content: center; padding: 20px;">
-    <div style="background: white; border-radius: 14px; width: 95%; max-width: 1100px; height: 90vh; display: flex; flex-direction: column; overflow: hidden; box-shadow: 0 15px 45px rgba(0,0,0,0.35);">
-        <div style="padding: 14px 20px; background: #fdfdfd; border-bottom: 1px solid var(--light-gray); display: flex; justify-content: space-between; align-items: center;">
-            <div style="display: flex; align-items: center; gap: 10px; overflow: hidden;">
-                <span id="modalDocIcon" style="font-size: 1.4rem;">📄</span>
-                <div>
-                    <h4 id="modalDocTitle" style="margin: 0; font-size: 1.05rem; color: var(--dark); white-space: nowrap; text-overflow: ellipsis; overflow: hidden;">Document Viewer</h4>
-                    <span id="modalDocSubtitle" style="font-size: 0.8rem; color: var(--gray);">Course Materials</span>
-                </div>
-            </div>
-            <div style="display: flex; align-items: center; gap: 10px;">
-                <a id="modalDocExternalLink" href="#" target="_blank" class="btn btn-secondary btn-sm" style="display: inline-flex; align-items: center; gap: 5px;">
-                    🔗 Open in Tab ↗
-                </a>
-                <button type="button" id="closeFileViewerBtn" style="background: none; border: none; font-size: 1.8rem; line-height: 1; cursor: pointer; color: var(--gray);">&times;</button>
-            </div>
-        </div>
-        <div style="flex: 1; background: #525659; position: relative;">
-            <iframe id="fileViewer" src="" style="width: 100%; height: 100%; border: none;"></iframe>
-        </div>
-    </div>
 </div>
 {% endblock %}
 
@@ -934,7 +1101,7 @@ document.addEventListener("DOMContentLoaded", () => {
                     let moduleHtml = `
                         <div class="module-card">
                             <div class="module-header">
-                                <span class="module-title">${m.module}</span>
+                                <span class="module-title">${escapeHtml(m.module)}</span>
                                 ${m.hours ? `<span class="module-hours-badge">${m.hours} Hours</span>` : ''}
                             </div>
                             <div class="topics-container">
@@ -942,13 +1109,32 @@ document.addEventListener("DOMContentLoaded", () => {
 
                     m.topics.forEach(t => {
                         currentTotalTopics++;
+                        const escName = escapeHtml(t.name);
                         moduleHtml += `
                             <div class="topic" id="topic-container-${t.id}">
                                 <input type="checkbox"
                                        class="topicCheck"
                                        id="topic-cb-${t.id}"
                                        data-topic-id="${t.id}">
-                                <label class="topic-name" for="topic-cb-${t.id}">${t.name}</label>
+                                <span class="topic-name" id="topic-label-${t.id}" onclick="document.getElementById('topic-cb-${t.id}').click()">${escName}</span>
+                                
+                                <div class="topic-edit-inline" id="topic-edit-wrap-${t.id}" style="display: none; flex: 1; align-items: center; gap: 6px;">
+                                    <input type="text" class="topic-edit-input" id="topic-edit-input-${t.id}" value="${escName}" onkeydown="if(event.key==='Enter') saveTopicEdit(${t.id}, event); else if(event.key==='Escape') cancelTopicEdit(${t.id}, event);">
+                                    <button type="button" class="btn btn-primary btn-xs" onclick="saveTopicEdit(${t.id}, event)">Save</button>
+                                    <button type="button" class="btn btn-secondary btn-xs" onclick="cancelTopicEdit(${t.id}, event)">Cancel</button>
+                                </div>
+
+                                <div class="topic-actions" id="topic-actions-${t.id}">
+                                    <button type="button" class="btn-topic-action" title="Edit this topic bullet" onclick="startTopicEdit(${t.id}, event)">✏️ Edit</button>
+                                    <button type="button" class="btn-topic-action" title="Add next bullet directly below" onclick="openAddBulletRow(${m.id}, ${t.id}, event)">➕ Add Next</button>
+                                    <button type="button" class="btn-topic-action btn-topic-delete" title="Delete bullet" onclick="deleteTopicBullet(${t.id}, event)">🗑️</button>
+                                </div>
+                            </div>
+                            <div class="topic-add-box" id="topic-add-box-${t.id}" style="display: none;">
+                                <span style="font-weight: 700; color: var(--primary); font-size: 1rem;">↳</span>
+                                <input type="text" id="new-bullet-input-${t.id}" class="topic-add-input" placeholder="Type new topic bullet (e.g., Preprocessing)..." onkeydown="if(event.key==='Enter') saveNewBulletAfter(${m.id}, ${t.id}); else if(event.key==='Escape') closeAddBulletRow(${t.id});">
+                                <button type="button" class="btn btn-primary btn-xs" onclick="saveNewBulletAfter(${m.id}, ${t.id})">Add Bullet</button>
+                                <button type="button" class="btn btn-secondary btn-xs" onclick="closeAddBulletRow(${t.id})">Cancel</button>
                             </div>
                         `;
                     });
@@ -1375,37 +1561,67 @@ document.addEventListener("DOMContentLoaded", () => {
             });
     };
 
+    // HTML string sanitizer
+    function escapeHtml(str) {
+        if (!str) return "";
+        return String(str)
+            .replace(/&/g, "&amp;")
+            .replace(/</g, "&lt;")
+            .replace(/>/g, "&gt;")
+            .replace(/"/g, "&quot;")
+            .replace(/'/g, "&#039;");
+    }
+
+    // Expose renderCourseSyllabus globally for reloads
+    window.renderCourseSyllabus = renderCourseSyllabus;
+
+    // =========================================================================
+    // INLINE DOCUMENT & DRIVE VIEWER (PERSONAL-MODE SIDE-BY-SIDE IMPLEMENTATION)
+    // =========================================================================
     window.openCourseFile = (courseId, filepath, filename) => {
-        const modal = document.getElementById("fileViewerModal");
+        const viewer = document.getElementById("viewer");
         const iframe = document.getElementById("fileViewer");
         const title = document.getElementById("modalDocTitle");
         const subtitle = document.getElementById("modalDocSubtitle");
         const extLink = document.getElementById("modalDocExternalLink");
 
         const fileUrl = `/api/open-file/${courseId}/${encodeURIComponent(filepath)}`;
-        iframe.src = fileUrl;
-        title.innerText = filename;
-        subtitle.innerText = filepath;
-        extLink.href = fileUrl;
+        if (iframe) iframe.src = fileUrl;
+        if (title) title.innerText = filename;
+        if (subtitle) subtitle.innerText = filepath;
+        if (extLink) extLink.href = fileUrl;
 
-        modal.style.display = "flex";
+        if (viewer) {
+            viewer.style.display = "flex";
+        }
     };
 
-    window.closeFileViewerModal = () => {
-        const modal = document.getElementById("fileViewerModal");
+    window.closeInlineViewer = () => {
+        const viewer = document.getElementById("viewer");
         const iframe = document.getElementById("fileViewer");
-        iframe.src = "";
-        modal.style.display = "none";
+        if (iframe) iframe.src = "";
+        if (viewer) viewer.style.display = "none";
+    };
+    window.closeFileViewerModal = window.closeInlineViewer;
+
+    window.toggleViewerExpand = () => {
+        const viewer = document.getElementById("viewer");
+        const btn = document.getElementById("toggleExpandViewerBtn");
+        if (!viewer) return;
+        viewer.classList.toggle("expanded");
+        if (btn) {
+            btn.innerText = viewer.classList.contains("expanded") ? "⛶ Standard" : "⛶ Expand";
+        }
     };
 
     const closeViewerBtn = document.getElementById("closeFileViewerBtn");
     if (closeViewerBtn) {
-        closeViewerBtn.onclick = closeFileViewerModal;
+        closeViewerBtn.onclick = window.closeInlineViewer;
     }
 
     window.previewDriveFolder = () => {
         if (!currentDriveUrl) return;
-        const modal = document.getElementById("fileViewerModal");
+        const viewer = document.getElementById("viewer");
         const iframe = document.getElementById("fileViewer");
         const title = document.getElementById("modalDocTitle");
         const subtitle = document.getElementById("modalDocSubtitle");
@@ -1417,12 +1633,143 @@ document.addEventListener("DOMContentLoaded", () => {
             embedUrl = `https://drive.google.com/embeddedfolderview?id=${match[1]}#list`;
         }
 
-        iframe.src = embedUrl;
-        title.innerText = "Google Drive Folder Viewer";
-        subtitle.innerText = currentDriveUrl;
-        extLink.href = currentDriveUrl;
+        if (iframe) iframe.src = embedUrl;
+        if (title) title.innerText = "Google Drive Folder Viewer";
+        if (subtitle) subtitle.innerText = currentDriveUrl;
+        if (extLink) extLink.href = currentDriveUrl;
 
-        modal.style.display = "flex";
+        if (viewer) {
+            viewer.style.display = "flex";
+        }
+    };
+
+    // =========================================================================
+    // TOPIC EDITING & DYNAMIC NEXT-BULLET INSERTION (STUDENT PERSONALIZATION)
+    // =========================================================================
+    window.startTopicEdit = (topicId, event) => {
+        if (event) event.stopPropagation();
+        const label = document.getElementById(`topic-label-${topicId}`);
+        const editWrap = document.getElementById(`topic-edit-wrap-${topicId}`);
+        const actions = document.getElementById(`topic-actions-${topicId}`);
+        const cb = document.getElementById(`topic-cb-${topicId}`);
+        if (label) label.style.display = "none";
+        if (cb) cb.style.display = "none";
+        if (actions) actions.style.display = "none";
+        if (editWrap) {
+            editWrap.style.display = "flex";
+            const input = document.getElementById(`topic-edit-input-${topicId}`);
+            if (input) {
+                input.focus();
+                input.select();
+            }
+        }
+    };
+
+    window.cancelTopicEdit = (topicId, event) => {
+        if (event) event.stopPropagation();
+        const label = document.getElementById(`topic-label-${topicId}`);
+        const editWrap = document.getElementById(`topic-edit-wrap-${topicId}`);
+        const actions = document.getElementById(`topic-actions-${topicId}`);
+        const cb = document.getElementById(`topic-cb-${topicId}`);
+        if (label) label.style.display = "";
+        if (cb) cb.style.display = "";
+        if (actions) actions.style.display = "";
+        if (editWrap) editWrap.style.display = "none";
+    };
+
+    window.saveTopicEdit = (topicId, event) => {
+        if (event) event.stopPropagation();
+        const input = document.getElementById(`topic-edit-input-${topicId}`);
+        if (!input) return;
+        const newName = input.value.trim();
+        if (!newName) {
+            alert("Topic bullet cannot be empty.");
+            return;
+        }
+
+        fetch(`/api/topics/${topicId}`, {
+            method: "PUT",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ name: newName })
+        })
+        .then(res => {
+            if (!res.ok) throw new Error("Failed to save topic edit");
+            return res.json();
+        })
+        .then(data => {
+            const label = document.getElementById(`topic-label-${topicId}`);
+            if (label) label.innerText = newName;
+            window.cancelTopicEdit(topicId);
+        })
+        .catch(err => alert("Error updating topic: " + err.message));
+    };
+
+    window.openAddBulletRow = (moduleId, topicId, event) => {
+        if (event) event.stopPropagation();
+        const box = document.getElementById(`topic-add-box-${topicId}`);
+        if (box) {
+            box.style.display = "flex";
+            const input = document.getElementById(`new-bullet-input-${topicId}`);
+            if (input) {
+                input.focus();
+            }
+        }
+    };
+
+    window.closeAddBulletRow = (topicId) => {
+        const box = document.getElementById(`topic-add-box-${topicId}`);
+        if (box) box.style.display = "none";
+    };
+
+    window.saveNewBulletAfter = (moduleId, topicId) => {
+        const input = document.getElementById(`new-bullet-input-${topicId}`);
+        if (!input) return;
+        const newName = input.value.trim();
+        if (!newName) {
+            alert("Please enter the new bullet text.");
+            return;
+        }
+
+        fetch("/api/topics", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+                module_id: moduleId,
+                name: newName,
+                after_topic_id: topicId
+            })
+        })
+        .then(res => {
+            if (!res.ok) throw new Error("Failed to add new bullet");
+            return res.json();
+        })
+        .then(data => {
+            const currentCourseId = document.getElementById("course").value;
+            if (currentCourseId) {
+                renderCourseSyllabus(currentCourseId);
+            }
+        })
+        .catch(err => alert("Error adding new bullet: " + err.message));
+    };
+
+    window.deleteTopicBullet = (topicId, event) => {
+        if (event) event.stopPropagation();
+        if (!confirm("Are you sure you want to remove this topic bullet?")) return;
+
+        fetch(`/api/topics/${topicId}`, {
+            method: "DELETE"
+        })
+        .then(res => {
+            if (!res.ok) throw new Error("Failed to delete bullet");
+            return res.json();
+        })
+        .then(data => {
+            const currentCourseId = document.getElementById("course").value;
+            if (currentCourseId) {
+                renderCourseSyllabus(currentCourseId);
+            }
+        })
+        .catch(err => alert("Error deleting bullet: " + err.message));
     };
 
     window.promptDriveUrl = () => {

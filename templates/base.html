@@ -127,6 +127,68 @@
             display: flex;
             flex: 1;
             min-height: calc(100vh - 65px);
+            transition: var(--transition);
+        }
+
+        /* Sidebar Toggle & Fold System */
+        .sidebar-toggle-btn {
+            background: rgba(67, 97, 238, 0.06);
+            border: 1px solid rgba(67, 97, 238, 0.15);
+            cursor: pointer;
+            padding: 8px 10px;
+            border-radius: 8px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            gap: 4px;
+            transition: var(--transition);
+        }
+
+        .sidebar-toggle-btn:hover {
+            background: rgba(67, 97, 238, 0.15);
+            transform: scale(1.04);
+        }
+
+        .sidebar-toggle-btn .toggle-bar {
+            width: 18px;
+            height: 2px;
+            background: var(--primary);
+            border-radius: 2px;
+            transition: var(--transition);
+        }
+
+        .sidebar-nav-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 8px 10px 8px;
+            margin-bottom: 4px;
+            border-bottom: 1px solid var(--light-gray);
+        }
+
+        .sidebar-nav-title {
+            font-size: 0.75rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.8px;
+            color: var(--gray);
+        }
+
+        .sidebar-fold-btn {
+            background: none;
+            border: none;
+            color: var(--gray);
+            cursor: pointer;
+            font-size: 1.1rem;
+            line-height: 1;
+            padding: 4px 6px;
+            border-radius: 6px;
+            transition: var(--transition);
+        }
+
+        .sidebar-fold-btn:hover {
+            background: rgba(0, 0, 0, 0.06);
+            color: var(--primary);
         }
 
         /* App Navigation Sidebar */
@@ -134,12 +196,31 @@
             width: 260px;
             background: white;
             border-right: 1px solid rgba(0, 0, 0, 0.07);
-            padding: 24px 16px;
+            padding: 20px 14px;
             display: flex;
             flex-direction: column;
             gap: 6px;
             flex-shrink: 0;
             box-shadow: 2px 0 10px rgba(0, 0, 0, 0.02);
+            transition: width 0.3s cubic-bezier(0.25, 0.8, 0.25, 1),
+                        padding 0.3s cubic-bezier(0.25, 0.8, 0.25, 1),
+                        opacity 0.25s ease,
+                        margin 0.3s ease;
+            overflow-x: hidden;
+            position: relative;
+            z-index: 40;
+        }
+
+        /* Folded / Collapsed Sidebar State */
+        .app-shell.sidebar-collapsed .app-sidebar {
+            width: 0 !important;
+            min-width: 0 !important;
+            padding: 20px 0 !important;
+            margin-left: -1px;
+            border-right: none !important;
+            opacity: 0 !important;
+            pointer-events: none !important;
+            visibility: hidden;
         }
 
         .sidebar-section-title {
@@ -332,10 +413,17 @@
 
     <!-- Header Navbar -->
     <header class="main-header">
-        <a href="/" class="brand-container">
-            <span class="brand-icon">🎓</span>
-            <span class="brand-title">TrackMyCourse</span>
-        </a>
+        <div style="display: flex; align-items: center; gap: 14px;">
+            <button type="button" id="appSidebarToggleBtn" class="sidebar-toggle-btn" title="Toggle Navigation Menu" aria-label="Toggle Navigation Menu">
+                <span class="toggle-bar"></span>
+                <span class="toggle-bar"></span>
+                <span class="toggle-bar"></span>
+            </button>
+            <a href="/" class="brand-container">
+                <span class="brand-icon">🎓</span>
+                <span class="brand-title">TrackMyCourse</span>
+            </a>
+        </div>
 
         <div class="header-actions">
             {% if current_user.is_authenticated %}
@@ -357,7 +445,12 @@
     <!-- Application Shell -->
     <div class="app-shell">
         <!-- Sidebar Navigation -->
-        <aside class="app-sidebar">
+        <aside class="app-sidebar" id="appSidebar">
+            <div class="sidebar-nav-header">
+                <span class="sidebar-nav-title">Menu Navigation</span>
+                <button type="button" id="sidebarFoldBtn" class="sidebar-fold-btn" title="Collapse Menu" aria-label="Collapse Menu">⇤</button>
+            </div>
+            
             <div class="sidebar-section-title">Academic Workspace</div>
             
             <a href="{{ url_for('dashboard_view') }}" class="nav-link {% if active_page == 'dashboard' %}active{% endif %}">
@@ -430,6 +523,34 @@
         </main>
     </div>
 
+    <script>
+        // Sidebar Navigation Fold / Expand System
+        (function() {
+            const shell = document.querySelector(".app-shell");
+            const toggleBtn = document.getElementById("appSidebarToggleBtn");
+            const foldBtn = document.getElementById("sidebarFoldBtn");
+            if (!shell) return;
+
+            const STORAGE_KEY = "tmc_nav_sidebar_collapsed";
+            const isCollapsedSaved = localStorage.getItem(STORAGE_KEY) === "true";
+            if (isCollapsedSaved) {
+                shell.classList.add("sidebar-collapsed");
+                if (toggleBtn) toggleBtn.classList.add("active");
+            }
+
+            function toggleSidebar() {
+                const isCollapsed = shell.classList.toggle("sidebar-collapsed");
+                if (toggleBtn) {
+                    if (isCollapsed) toggleBtn.classList.add("active");
+                    else toggleBtn.classList.remove("active");
+                }
+                localStorage.setItem(STORAGE_KEY, isCollapsed ? "true" : "false");
+            }
+
+            if (toggleBtn) toggleBtn.addEventListener("click", toggleSidebar);
+            if (foldBtn) foldBtn.addEventListener("click", toggleSidebar);
+        })();
+    </script>
     {% block extra_scripts %}{% endblock %}
 </body>
 </html>

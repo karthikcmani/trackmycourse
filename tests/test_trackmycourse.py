@@ -558,3 +558,63 @@ def test_course_folder_panel_and_google_drive_integration(client, app):
     assert res_up.status_code == 200
     assert res_up.json["success"] is True
 
+
+# ============================================================================
+# 13. TOPIC BULLET EDITING & NEXT-BULLET INSERTION (STUDENT PERSONALIZATION)
+# ============================================================================
+
+def test_topic_bullet_editing_and_next_bullet_creation(client, app):
+    """
+    Verify student ability to edit existing syllabus bullet text and insert
+    a new bullet immediately following any bullet (as the very next bullet),
+    with proper sequence preservation.
+    """
+    # 1. Fetch syllabus for Course 8 (20MCA201 - Data Science & Machine Learning)
+    res = client.get("/api/syllabus?course_id=8")
+    assert res.status_code == 200
+    modules = res.json
+    assert len(modules) > 0
+    mod1 = modules[0]
+    assert "Data Science" in mod1["module"]
+
+    # Locate topic 1 in module 1
+    topics = mod1["topics"]
+    assert len(topics) >= 2
+    first_topic = topics[0]
+
+    # 2. Test editing topic name (PUT /api/topics/<id>)
+    original_name = first_topic["name"]
+    res_edit = client.put(f"/api/topics/{first_topic['id']}", json={
+        "name": "Data science lifecycle, data collection, and cleaning"
+    })
+    assert res_edit.status_code == 200
+    assert res_edit.json["success"] is True
+    assert res_edit.json["topic"]["name"] == "Data science lifecycle, data collection, and cleaning"
+
+    # 3. Test inserting a new bullet directly after first_topic (POST /api/topics)
+    res_create = client.post("/api/topics", json={
+        "module_id": mod1["id"],
+        "name": "Test Automated Preprocessing Bullet",
+        "after_topic_id": first_topic["id"]
+    })
+    assert res_create.status_code == 201
+    created_topic = res_create.json["topic"]
+    new_topic_id = created_topic["id"]
+
+    try:
+        # Verify order in syllabus
+        res_after = client.get("/api/syllabus?course_id=8")
+        mod1_after = res_after.json[0]
+        t_ids = [t["id"] for t in mod1_after["topics"]]
+        first_idx = t_ids.index(first_topic["id"])
+        new_idx = t_ids.index(new_topic_id)
+        # New topic must be the VERY NEXT bullet immediately following first_topic
+        assert new_idx == first_idx + 1
+
+    finally:
+        # Clean up created test bullet
+        res_del = client.delete(f"/api/topics/{new_topic_id}")
+        assert res_del.status_code == 200
+        assert res_del.json["success"] is True
+
+
