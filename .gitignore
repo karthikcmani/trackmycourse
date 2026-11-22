@@ -32,3 +32,6 @@ package-lock.json
 templates/sol.*
 templates/resume.html
 templates/a.exe
+
+# Uploads
+uploads/
